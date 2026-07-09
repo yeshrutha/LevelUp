@@ -56,10 +56,43 @@ export const Analytics = () => {
         const pct = possible > 0 ? Math.round((checked / possible) * 100) : 0;
         return { name: page.title.substring(0, 12), progress: pct };
       })
-    : [
-        { name: 'Transform A', progress: 40 },
-        { name: 'Transform B', progress: 70 }
-      ];
+    : [];
+
+  // Generate data for the GitHub contribution grid (last 16 weeks)
+  const getContributionGridData = () => {
+    const grid = [];
+    const today = new Date();
+    
+    // We want 16 columns * 7 days = 112 days
+    const startDay = new Date(today);
+    startDay.setDate(today.getDate() - 112);
+    // Align to Sunday
+    const dayOfWeek = startDay.getDay();
+    startDay.setDate(startDay.getDate() - dayOfWeek);
+
+    for (let c = 0; c < 16; c++) {
+      const column = [];
+      for (let r = 0; r < 7; r++) {
+        const currentDate = new Date(startDay);
+        currentDate.setDate(startDay.getDate() + (c * 7) + r);
+        const dateStr = currentDate.toISOString().split('T')[0];
+        
+        // Count checked habits for this date
+        const dayLogs = habits[dateStr] || {};
+        const completedCount = Object.values(dayLogs).filter(Boolean).length;
+        
+        column.push({
+          date: dateStr,
+          count: completedCount,
+          isFuture: currentDate > today
+        });
+      }
+      grid.push(column);
+    }
+    return grid;
+  };
+
+  const contributionGrid = getContributionGridData();
 
   return (
     <div className="space-y-6 pb-12 select-none">
@@ -232,7 +265,60 @@ export const Analytics = () => {
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
 
+      {/* GitHub-style Habit Heatmap Grid */}
+      <div className="glass-panel p-5 rounded-xl border-white/10 bg-slate-900/20">
+        <h3 className="text-xs font-futuristic font-bold text-white uppercase tracking-wider mb-1">
+          Habit Consistency Heatmap
+        </h3>
+        <p className="text-[9px] text-slate-400 mb-4 font-display uppercase tracking-widest">
+          Visual representation of routine consistency and checked habit logs over the last 16 weeks
+        </p>
+        
+        <div className="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-none">
+          <div className="grid grid-rows-7 gap-1 text-[8px] text-slate-500 font-futuristic uppercase pr-1 shrink-0 select-none leading-none h-[105px] justify-between py-0.5">
+            <span>Sun</span>
+            <span className="invisible">Mon</span>
+            <span>Tue</span>
+            <span className="invisible">Wed</span>
+            <span>Thu</span>
+            <span className="invisible">Fri</span>
+            <span>Sat</span>
+          </div>
+
+          <div className="flex gap-1">
+            {contributionGrid.map((column, colIdx) => (
+              <div key={colIdx} className="grid grid-rows-7 gap-1">
+                {column.map((day) => {
+                  let colorClass = 'bg-slate-950/60 border border-white/[0.02]';
+                  if (!day.isFuture) {
+                    if (day.count === 1) colorClass = 'bg-cyan-500/15 border border-cyan-500/20';
+                    else if (day.count === 2) colorClass = 'bg-cyan-500/40 border border-cyan-400/30';
+                    else if (day.count >= 3) colorClass = 'bg-cyan-500 border border-cyan-300 shadow-glow-accent';
+                  }
+                  return (
+                    <div
+                      key={day.date}
+                      className={`w-3 h-3 rounded-sm transition-all duration-300 ${colorClass}`}
+                      title={`${day.date}: ${day.count} habits completed`}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center justify-end gap-1.5 text-[8px] text-slate-500 font-futuristic uppercase mt-3">
+          <span>Less</span>
+          <div className="w-2.5 h-2.5 rounded-sm bg-slate-950/60 border border-white/[0.02]" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-cyan-500/15 border border-cyan-500/20" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-cyan-500/40 border border-cyan-400/30" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-cyan-500 border border-cyan-300" />
+          <span>More</span>
+        </div>
       </div>
 
     </div>

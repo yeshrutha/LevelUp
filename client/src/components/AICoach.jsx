@@ -8,16 +8,25 @@ export const AICoach = () => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([
-    {
-      id: 'm1',
-      sender: 'ai',
-      text: `Good Evening, Cadet Penguin. I am your LevelUp AI Coach. I monitor your readiness index (currently at ${user?.readiness || 0}%). How can I assist your growth journey today?`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem(`levelup_chat_${user?.email}`);
+    if (saved) return JSON.parse(saved);
+    return [
+      {
+        id: 'm1',
+        sender: 'ai',
+        text: `Hello, ${user?.displayName || 'User'}. I am your Habit Mastery AI Coach. I monitor your readiness index (currently at ${user?.readiness || 0}%). How can I assist your growth journey today?`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ];
+  });
+
+  useEffect(() => {
+    if (user?.email) {
+      localStorage.setItem(`levelup_chat_${user.email}`, JSON.stringify(messages));
     }
-  ]);
-  const leetcodeCount = user?.leetcodeCount || 0;
-  const projectsCount = user?.projectsCount || 0;
+  }, [messages, user?.email]);
+
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -71,15 +80,15 @@ export const AICoach = () => {
     } catch (e) {
       // Offline fallback simulator
       setTimeout(() => {
-        let reply = "Analyzing core metrics. Try solving a LeetCode problem or completing your project milestones to raise your readiness index!";
+        let reply = "I am analyzing your Habit Mastery details. Completing custom workspace pages, checkmarks in the calendar, and daily habits is the fastest way to increase your readiness index.";
         const lowText = msg.toLowerCase();
         
-        if (lowText.includes('dsa') || lowText.includes('leetcode')) {
-          reply = `Focus on pattern families and time complexity. Aim for another ${leetcodeCount + 1} solid practice problems today to build momentum.`;
-        } else if (lowText.includes('project')) {
-          reply = `You have ${projectsCount} project milestone${projectsCount === 1 ? '' : 's'} tracked. Turn at least one into an interview-ready case study with clear outcomes.`;
-        } else if (lowText.includes('resume') || lowText.includes('interview')) {
-          reply = "Ensure your resume highlights quantifiable results (e.g., 'Optimized query latency by 40%'). Practice explaining this vocally in our Communication tab.";
+        if (lowText.includes('habit') || lowText.includes('routine') || lowText.includes('streak')) {
+          reply = "Building habits requires consistency. Focus on completing your active daily checklist, and try setting calendar alarms to lock in streak milestones.";
+        } else if (lowText.includes('workspace') || lowText.includes('page')) {
+          reply = "Your custom workspace pages are direct syllabus checklists. Completing daily workspace checkpoints scales your XP gains depending on task consistency.";
+        } else if (lowText.includes('calendar') || lowText.includes('milestone')) {
+          reply = "Planning schedules helps clear focus. Ensure you review upcoming target deadlines in your calendar weekly.";
         }
 
         setMessages(prev => [...prev, {
@@ -182,16 +191,16 @@ export const AICoach = () => {
                   🎯 Daily Focus
                 </button>
                 <button
-                  onClick={() => handleSuggestion('How can I boost my DSA readiness?')}
+                  onClick={() => handleSuggestion('How can I maintain my daily habit streaks?')}
                   className="text-[10px] px-2.5 py-1 bg-slate-900 border border-white/5 rounded-full hover:border-cyan-400/30 hover:text-cyan-400 transition-colors"
                 >
-                  💻 DSA Advice
+                  🏋️ Habit Streaks
                 </button>
                 <button
-                  onClick={() => handleSuggestion('How to polish my resume?')}
+                  onClick={() => handleSuggestion('Suggest calendar scheduling best practices')}
                   className="text-[10px] px-2.5 py-1 bg-slate-900 border border-white/5 rounded-full hover:border-cyan-400/30 hover:text-cyan-400 transition-colors"
                 >
-                  📝 Resume Tips
+                  📅 Calendar Planning
                 </button>
               </div>
             )}

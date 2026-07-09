@@ -30,7 +30,8 @@ export const RANK_COLORS = {
 
 // Web Audio API Promotion Sound Synthesizer
 export const playPromotionSound = () => {
-  const isMuted = localStorage.getItem('levelup_sound_muted') === 'true';
+  const activeEmail = localStorage.getItem('levelup_active_email') || '';
+  const isMuted = localStorage.getItem(`levelup_sound_muted_${activeEmail}`) === 'true';
   if (isMuted) return;
 
   try {
@@ -153,6 +154,28 @@ export const AppProvider = ({ children }) => {
   const [isMuted, setIsMuted] = useState(() => {
     return localStorage.getItem('levelup_sound_muted') === 'true';
   });
+
+  const changeMuteState = (mutedOrFunc) => {
+    setIsMuted(prev => {
+      const next = typeof mutedOrFunc === 'function' ? mutedOrFunc(prev) : mutedOrFunc;
+      setUser(userPrev => {
+        if (!userPrev) return userPrev;
+        return { ...userPrev, isMuted: next };
+      });
+      return next;
+    });
+  };
+
+  const changeThemeMode = (modeOrFunc) => {
+    setThemeMode(prev => {
+      const next = typeof modeOrFunc === 'function' ? modeOrFunc(prev) : modeOrFunc;
+      setUser(userPrev => {
+        if (!userPrev) return userPrev;
+        return { ...userPrev, themeMode: next };
+      });
+      return next;
+    });
+  };
 
   // Web Audio API custom synthesizer chimes (Success / Level Progress)
   const playAlertSound = (type = 'success') => {
@@ -302,14 +325,16 @@ export const AppProvider = ({ children }) => {
         localStorage.setItem('levelup_registered_emails', JSON.stringify(nextRegistered));
 
         const freshUser = {
-          displayName: name || 'Cadet',
+          displayName: name,
           email: emailKey,
-          avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name || 'cadet')}`,
-          xp: 0,
           level: 1,
+          xp: 0,
           rank: 'Iron I',
           streak: 0,
-          readiness: 0
+          readiness: 0,
+          themeMode: 'light',
+          isMuted: false,
+          unlockedAchievements: []
         };
 
         const freshHabitList = ['Exercise', 'Drink Water', 'Read Book'];
@@ -416,6 +441,11 @@ export const AppProvider = ({ children }) => {
         setNotifications(loadedAlerts.length > 0 ? loadedAlerts : [
           { id: 'n_welcome', title: 'Welcome Sync Complete', body: 'Workspace configuration loaded successfully. Let\'s level up!', type: 'system', read: false, time: 'Just now' }
         ]);
+
+        if (loadedUser.themeMode) setThemeMode(loadedUser.themeMode);
+        if (loadedUser.isMuted !== undefined) setIsMuted(loadedUser.isMuted);
+
+        localStorage.setItem('levelup_active_email', emailKey);
 
         setCurrentTab('dashboard');
         return { success: true };
@@ -532,17 +562,80 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => {
     localStorage.setItem('levelup_sound_muted', isMuted ? 'true' : 'false');
-  }, [isMuted]);
+    if (user && user.email) {
+      const key = user.email.toLowerCase();
+      localStorage.setItem(`levelup_sound_muted_${key}`, isMuted ? 'true' : 'false');
+    }
+  }, [isMuted, user]);
 
   useEffect(() => {
     localStorage.setItem('levelup_theme_mode', themeMode);
+    if (user && user.email) {
+      const key = user.email.toLowerCase();
+      localStorage.setItem(`levelup_theme_mode_${key}`, themeMode);
+    }
     const body = document.body;
     if (themeMode === 'dark') {
       body.classList.add('dark');
     } else {
       body.classList.remove('dark');
     }
-  }, [themeMode]);
+  }, [themeMode, user]);
+
+  // Reactive Achievements Checker Loop
+  useEffect(() => {
+    if (user) {
+      const currentUnlocks = user.unlockedAchievements || [];
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayHabitLogs = habits[todayStr] || {};
+      const anyHabitCheckedToday = Object.values(todayHabitLogs).some(Boolean);
+
+      const hasCompletedPage = customPages.some(page => {
+        const totalPossible = (page.tasks || []).length * page.termDays;
+        if (totalPossible === 0) return false;
+        let checked = 0;
+        Object.values(page.completedLogs || {}).forEach(list => {
+          checked += (list || []).length;
+        });
+        return checked >= totalPossible;
+      });
+
+      const checks = [
+        { id: 'lvl_2', title: 'Growth Initiate', condition: user.level >= 2 },
+        { id: 'lvl_5', title: 'Growth Master', condition: user.level >= 5 },
+        { id: 'xp_silver', title: 'Rank Ascent', condition: user.xp >= 300 },
+        { id: 'habit_today', title: 'Daily Discipline', condition: anyHabitCheckedToday },
+        { id: 'habit_pioneer', title: 'Atomic Habits', condition: habitList.length >= 4 },
+        { id: 'page_first', title: 'Workspace Architect', condition: customPages.length >= 1 },
+        { id: 'page_comp', title: 'Milestone Achieved', condition: hasCompletedPage },
+        { id: 'cal_first', title: 'Time Planner', condition: calendar.length >= 1 }
+      ];
+
+      let newlyUnlocked = [];
+      let changed = false;
+      const updated = [...currentUnlocks];
+
+      checks.forEach(c => {
+        if (c.condition && !updated.includes(c.id)) {
+          updated.push(c.id);
+          newlyUnlocked.push(c);
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        setUser(prev => {
+          if (!prev) return prev;
+          return { ...prev, unlockedAchievements: updated };
+        });
+        newlyUnlocked.forEach(ach => {
+          setTimeout(() => {
+            triggerToast('🏆 Trophy Unlocked!', `Achievement: "${ach.title}" unlocked!`, 'rank');
+          }, 500);
+        });
+      }
+    }
+  }, [user?.xp, user?.level, customPages, habits, habitList, calendar]);
 
   // Calculate overall goal growth progress percentage
   const recalculateReadiness = () => {
@@ -791,9 +884,9 @@ export const AppProvider = ({ children }) => {
       notifications, setNotifications, markAllNotificationsRead, purgeAllNotifications,
       addXP, loginUser, logoutUser,
       customPages, createCustomPage, updateCustomPage, deleteCustomPage, togglePageTask,
-      themeMode, setThemeMode,
+      themeMode, setThemeMode: changeThemeMode,
       toasts, triggerToast,
-      isMuted, setIsMuted
+      isMuted, setIsMuted: changeMuteState
     }}>
       {children}
     </AppContext.Provider>

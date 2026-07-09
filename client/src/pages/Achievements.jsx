@@ -3,22 +3,8 @@ import { useApp } from '../context/AppContext';
 import { Trophy, Shield, Award, Star, CheckSquare, Zap, Layout, Calendar } from 'lucide-react';
 
 export const Achievements = () => {
-  const { user, customPages, habits, habitList, calendar } = useApp();
-
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayHabitLogs = habits[todayStr] || {};
-  const anyHabitCheckedToday = Object.values(todayHabitLogs).some(Boolean);
-
-  // Check if any custom workspace page is fully completed
-  const hasCompletedPage = customPages.some(page => {
-    const totalPossible = (page.tasks || []).length * page.termDays;
-    if (totalPossible === 0) return false;
-    let checked = 0;
-    Object.values(page.completedLogs || {}).forEach(list => {
-      checked += (list || []).length;
-    });
-    return checked >= totalPossible;
-  });
+  const { user, customPages, habitList, calendar } = useApp();
+  const currentUnlocks = user?.unlockedAchievements || [];
 
   const achievementList = [
     {
@@ -26,7 +12,7 @@ export const Achievements = () => {
       title: 'Growth Initiate',
       description: 'Progress your character profile to Level 2.',
       requirement: 'Player Level >= 2',
-      unlocked: user.level >= 2,
+      unlocked: currentUnlocks.includes('lvl_2'),
       icon: Shield
     },
     {
@@ -34,7 +20,7 @@ export const Achievements = () => {
       title: 'Growth Master',
       description: 'Progress your character profile to Level 5.',
       requirement: 'Player Level >= 5',
-      unlocked: user.level >= 5,
+      unlocked: currentUnlocks.includes('lvl_5'),
       icon: Trophy
     },
     {
@@ -42,7 +28,7 @@ export const Achievements = () => {
       title: 'Rank Ascent',
       description: 'Earn 300+ XP to ascend your rank badge.',
       requirement: 'Earn 300+ XP points',
-      unlocked: user.xp >= 300,
+      unlocked: currentUnlocks.includes('xp_silver'),
       icon: Star
     },
     {
@@ -50,15 +36,15 @@ export const Achievements = () => {
       title: 'Daily Discipline',
       description: 'Check off your first habit routine today.',
       requirement: 'Check off 1 habit today',
-      unlocked: anyHabitCheckedToday,
+      unlocked: currentUnlocks.includes('habit_today'),
       icon: CheckSquare
     },
     {
       id: 'habit_pioneer',
-      title: 'Atomic habits',
+      title: 'Atomic Habits',
       description: 'Customize your tracker by adding 4+ habit targets.',
       requirement: 'Habit list count >= 4',
-      unlocked: habitList.length >= 4,
+      unlocked: currentUnlocks.includes('habit_pioneer'),
       icon: Zap
     },
     {
@@ -66,7 +52,7 @@ export const Achievements = () => {
       title: 'Workspace Architect',
       description: 'Create your first custom Notion workspace page.',
       requirement: 'Create 1+ Notion Pages',
-      unlocked: customPages.length >= 1,
+      unlocked: currentUnlocks.includes('page_first'),
       icon: Layout
     },
     {
@@ -74,7 +60,7 @@ export const Achievements = () => {
       title: 'Milestone Achieved',
       description: 'Complete 100% of tasks across any term schedule page.',
       requirement: '1 custom page fully completed',
-      unlocked: hasCompletedPage,
+      unlocked: currentUnlocks.includes('page_comp'),
       icon: Trophy
     },
     {
@@ -82,7 +68,7 @@ export const Achievements = () => {
       title: 'Time Planner',
       description: 'Schedule a target milestone event in the Calendar.',
       requirement: 'Schedule 1+ Calendar events',
-      unlocked: calendar.length >= 1,
+      unlocked: currentUnlocks.includes('cal_first'),
       icon: Calendar
     }
   ];
