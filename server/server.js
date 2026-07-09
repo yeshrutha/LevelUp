@@ -532,38 +532,135 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// --- Google Gemini AI Assistant Integration ---
+const callGemini = async (systemInstruction, userPrompt, jsonMode = false) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured in your .env file.');
+  }
+
+  const model = "gemini-1.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: userPrompt }]
+        }
+      ],
+      systemInstruction: {
+        parts: [{ text: systemInstruction }]
+      },
+      generationConfig: jsonMode ? {
+        responseMimeType: 'application/json'
+      } : undefined
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini API Response: ${response.status} - ${errText}`);
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new Error('Received empty response payload from Gemini API.');
+  }
+  return text;
+};
+
 // AI Coach Response Generator Endpoint
 app.post('/api/ai/coach', async (req, res) => {
   const { message, stats } = req.body;
-  let reply = "Analyzing your growth logs... Keep up the focus! You are building valuable long-term consistency.";
+  const userEmail = req.user?.email || 'User';
+
+  const systemInstruction = `
+    You are the "LevelUp AI Coach", a strategic, motivational advisor in a Habit Mastery Terminal workspace.
+    The user is attempting to build productive habits, keep up day streaks, and complete custom timelines.
+    Provide constructive, direct, action-oriented suggestions (strictly under 3 sentences).
+    Active user metrics: readiness completion index: ${stats?.readiness || 0}%, active streak: ${stats?.streak || 0} days, user email: ${userEmail}.
+    Always encourage consistency. Be warm, supportive, but disciplined.
+  `;
+
+  try {
+    if (process.env.GEMINI_API_KEY) {
+      const reply = await callGemini(systemInstruction, message || 'Hello');
+      return res.json({ reply: reply.trim() });
+    }
+  } catch (err) {
+    console.error('⚠️ Gemini AI Coach Error:', err.message);
+  }
+
+  // Fallback if Gemini is not set up or fails
+  let reply = "I am analyzing your Habit Mastery details. Completing custom workspace pages, checkmarks in the calendar, and daily habits is the fastest way to increase your readiness index.";
   
-  const pLower = message.toLowerCase();
-  if (pLower.includes('dsa') || pLower.includes('leet') || pLower.includes('code')) {
-    reply = "Keep solving challenges sequentially. Focus on recognizing pattern families (two-pointers, sliding window, backtracking) instead of dry memorization.";
-  } else if (pLower.includes('habit') || pLower.includes('streak')) {
-    reply = `Streaks generate compound momentum! Maintaining a ${stats?.streak || 0}-day habit checkoff rate creates massive discipline. Don't break the chain.`;
-  } else if (pLower.includes('project') || pLower.includes('milestone')) {
-    reply = "When defining custom milestones, scope them into small, modular checklist items. Fast verification prevents study fatigue!";
-  } else {
-    const readiness = stats?.readiness || 0;
-    if (readiness < 40) {
-      reply = `You are currently at ${readiness}% completion readiness. Let's raise the momentum! Complete your daily habit goals and Notion tasks to gain quick XP and level up.`;
-    } else if (readiness < 70) {
-      reply = `Solid baseline progress! At ${readiness}% readiness, focus on establishing a 5-day habit streak to lift your tier rank toward Gold and Platinum.`;
+  if (message) {
+    const pLower = message.toLowerCase();
+    if (pLower.includes('dsa') || pLower.includes('leet') || pLower.includes('code')) {
+      reply = "Keep solving challenges sequentially. Focus on recognizing pattern families (two-pointers, sliding window, backtracking) instead of dry memorization.";
+    } else if (pLower.includes('habit') || pLower.includes('streak')) {
+      reply = `Streaks generate compound momentum! Maintaining a ${stats?.streak || 0}-day habit checkoff rate creates massive discipline. Don't break the chain.`;
+    } else if (pLower.includes('project') || pLower.includes('milestone')) {
+      reply = "When defining custom milestones, scope them into small, modular checklist items. Fast verification prevents study fatigue!";
     } else {
-      reply = `Outstanding execution! At ${readiness}% readiness, you are in the elite tier. Elevate your targets by designing more advanced milestones!`;
+      const readiness = stats?.readiness || 0;
+      if (readiness < 40) {
+        reply = `You are currently at ${readiness}% completion readiness. Let's raise the momentum! Complete your daily habit goals and Notion tasks to gain quick XP and level up.`;
+      } else if (readiness < 70) {
+        reply = `Solid baseline progress! At ${readiness}% readiness, focus on establishing a 5-day habit streak to lift your tier rank toward Gold and Platinum.`;
+      } else {
+        reply = `Outstanding execution! At ${readiness}% readiness, you are in the elite tier. Elevate your targets by designing more advanced milestones!`;
+      }
     }
   }
-  res.json({ reply });
+  return res.json({ reply });
 });
 
 // Notion-style AI Checklist Schedule Generator
-app.post('/api/ai/notion', (req, res) => {
+app.post('/api/ai/notion', async (req, res) => {
   const { prompt, termDays } = req.body;
   const daysCount = parseInt(termDays) || 5;
+
+  const systemInstruction = `
+    You are the "LevelUp Timeline Generator" assistant.
+    The user wants to generate a structured timeline schedule for the prompt: "${prompt}" spanning exactly ${daysCount} days.
+    You must return a JSON object with a "tasks" key containing an array of objects.
+    Each task object must have:
+      - "id": a unique string (e.g., "nt_1", "nt_2", etc.)
+      - "text": the description of the task for that day (be actionable, descriptive)
+      - "day": the integer day number (from 1 to ${daysCount})
+    Generate exactly 3 progressive tasks per day.
+    Ensure tasks are progressive and tailored specifically to the user prompt.
+    Output format:
+    {
+      "tasks": [
+        { "id": "nt_1", "text": "Task text for Day 1", "day": 1 },
+        { "id": "nt_2", "text": "Another task for Day 1", "day": 1 },
+        { "id": "nt_3", "text": "Task text for Day 2", "day": 2 }
+      ]
+    }
+  `;
+
+  try {
+    if (process.env.GEMINI_API_KEY) {
+      const responseText = await callGemini(systemInstruction, `Generate progressive tasks for ${daysCount} days matching the prompt: "${prompt}"`, true);
+      const parsed = JSON.parse(responseText);
+      if (parsed && Array.isArray(parsed.tasks)) {
+        return res.json({ tasks: parsed.tasks });
+      }
+    }
+  } catch (err) {
+    console.error('⚠️ Gemini Task Generator Error:', err.message);
+  }
+
+  // Fallback if Gemini is not set up or fails
   const pLower = (prompt || '').toLowerCase();
   const generatedTasks = [];
-
   let templates = [
     (d) => `Define daily objectives and review habit logs for Day ${d}`,
     (d) => `Spend 30 minutes executing routine task priorities for Day ${d}`,
@@ -607,7 +704,7 @@ app.post('/api/ai/notion', (req, res) => {
     });
   }
 
-  res.json({ tasks: generatedTasks });
+  return res.json({ tasks: generatedTasks });
 });
 
 app.listen(PORT, () => {
