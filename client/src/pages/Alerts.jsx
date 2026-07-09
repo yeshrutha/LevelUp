@@ -44,7 +44,7 @@ export const Alerts = () => {
 
   const handlePurgeLogs = () => {
     purgeAllNotifications();
-    triggerToast('Alerts Center', 'Workspace alerts purged successfully', 'success');
+    triggerToast('Notifications Center', 'Workspace notifications deleted successfully', 'success');
   };
 
   const handleToggleMute = () => {
@@ -134,7 +134,7 @@ export const Alerts = () => {
             className="px-3 py-2 bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 disabled:opacity-40 disabled:pointer-events-none rounded text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 cursor-pointer transition-colors"
           >
             <Trash2 size={12} />
-            Purge Log
+            Delete Log
           </button>
         </div>
       </div>
