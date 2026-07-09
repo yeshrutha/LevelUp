@@ -87,7 +87,7 @@ export const Alerts = () => {
       {/* Exit to dashboard navigation */}
       <button 
         onClick={() => setCurrentTab('dashboard')}
-        className="flex items-center gap-2 text-[10px] font-bold font-futuristic text-slate-400 hover:text-white uppercase tracking-widest transition-colors cursor-pointer group mb-2"
+        className="flex items-center gap-1.5 text-[10px] font-bold font-futuristic text-slate-500 hover:text-accent uppercase tracking-widest transition-colors cursor-pointer group mb-2"
       >
         <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
         <span>Back to Dashboard</span>

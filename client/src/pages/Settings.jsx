@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings as SettingsIcon, Sun, Moon, User, Mail, AlertOctagon, ShieldAlert, Sparkles } from 'lucide-react';
+import { Settings as SettingsIcon, Sun, Moon, User, Mail, AlertOctagon, ShieldAlert, Sparkles, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const Settings = () => {
@@ -46,9 +46,10 @@ export const Settings = () => {
       {/* Back to Dashboard breadcrumb link */}
       <button 
         onClick={() => setCurrentTab('dashboard')}
-        className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-accent font-semibold transition-colors cursor-pointer"
+        className="flex items-center gap-1.5 text-[10px] font-bold font-futuristic text-slate-500 hover:text-accent uppercase tracking-widest transition-colors cursor-pointer group mb-2"
       >
-        ← Back to Dashboard
+        <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
+        <span>Back to Dashboard</span>
       </button>
       
       {/* Header */}

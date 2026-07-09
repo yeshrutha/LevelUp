@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Sparkles, Trash2, Calendar, CheckSquare, ListTodo, Sliders, Play, AlertCircle, Bot } from 'lucide-react';
+import { Sparkles, Trash2, Calendar, CheckSquare, ListTodo, Sliders, Play, AlertCircle, Bot, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const NotionPage = ({ pageId }) => {
@@ -113,9 +113,10 @@ export const NotionPage = ({ pageId }) => {
       {/* Back to Dashboard breadcrumb link */}
       <button 
         onClick={() => setCurrentTab('dashboard')}
-        className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-accent font-semibold transition-colors cursor-pointer"
+        className="flex items-center gap-1.5 text-[10px] font-bold font-futuristic text-slate-500 hover:text-accent uppercase tracking-widest transition-colors cursor-pointer group mb-2"
       >
-        ← Back to Dashboard
+        <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
+        <span>Back to Dashboard</span>
       </button>
       
       {/* Cover Color Block */}
