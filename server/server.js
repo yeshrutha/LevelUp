@@ -8,6 +8,108 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+import nodemailer from 'nodemailer';
+
+let transporter = null;
+
+const getTransporter = async () => {
+  if (transporter) return transporter;
+
+  const host = process.env.SMTP_HOST;
+  const port = process.env.SMTP_PORT || 587;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (host && user && pass) {
+    transporter = nodemailer.createTransport({
+      host,
+      port: parseInt(port),
+      secure: port == 465,
+      auth: { user, pass }
+    });
+  } else {
+    try {
+      const testAccount = await nodemailer.createTestAccount();
+      transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass
+        }
+      });
+      console.log('✉️ Mailer: Ethereal test SMTP account configured successfully.');
+    } catch (err) {
+      console.error('❌ Mailer: Failed to initialize ethereal test mailer:', err.message);
+    }
+  }
+  return transporter;
+};
+
+const sendLoginEmail = async (userEmail, userName) => {
+  try {
+    const activeTransporter = await getTransporter();
+    if (!activeTransporter) return;
+
+    const mailOptions = {
+      from: `"${process.env.SMTP_FROM_NAME || 'Habit Mastery Terminal'}" <${process.env.SMTP_USER || 'no-reply@habitmastery.io'}>`,
+      to: userEmail,
+      subject: '🔒 Habit Mastery Terminal: New Login Detected',
+      text: `Hello ${userName || 'User'},\n\nWe detected a new login to your Habit Mastery Terminal account (${userEmail}) at ${new Date().toLocaleString()}.\n\nIf this was you, you can safely ignore this email.\n\nLevel Up Your Habits!\n- The Habit Mastery Terminal Team`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+          <h2 style="color: #6366f1; margin-top: 0;">🔒 New Login Detected</h2>
+          <p>Hello <strong>${userName || 'User'}</strong>,</p>
+          <p>We detected a new login to your <strong>Habit Mastery Terminal</strong> account (<code>${userEmail}</code>) at <strong>${new Date().toLocaleString()}</strong>.</p>
+          <p>If this was you, no action is required. Go build some habits!</p>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+          <p style="font-size: 11px; color: #64748b; margin-bottom: 0;">This email was sent by the Habit Mastery Terminal notification system. If you did not log in, please reset your password immediately.</p>
+        </div>
+      `
+    };
+
+    const info = await activeTransporter.sendMail(mailOptions);
+    console.log(`✉️ Login email sent to: ${userEmail}. Message ID: ${info.messageId}`);
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) console.log(`✉️ Email Preview Link: ${previewUrl}`);
+  } catch (err) {
+    console.error('❌ Mailer: Error sending login notification email:', err.message);
+  }
+};
+
+const sendRegisterEmail = async (userEmail, userName) => {
+  try {
+    const activeTransporter = await getTransporter();
+    if (!activeTransporter) return;
+
+    const mailOptions = {
+      from: `"${process.env.SMTP_FROM_NAME || 'Habit Mastery Terminal'}" <${process.env.SMTP_USER || 'no-reply@habitmastery.io'}>`,
+      to: userEmail,
+      subject: '🚀 Welcome to Habit Mastery Terminal!',
+      text: `Hello ${userName || 'User'},\n\nWelcome to your Habit Mastery Terminal! Your profile has been initialized successfully.\n\nStart customizing your habits, timelines, calendars, and achievements to raise your readiness index.\n\nLevel Up Your Habits!\n- The Habit Mastery Team`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+          <h2 style="color: #00e5ff; margin-top: 0;">🚀 Profile Initialized Successfully!</h2>
+          <p>Hello <strong>${userName || 'User'}</strong>,</p>
+          <p>Welcome to your <strong>Habit Mastery Terminal</strong>!</p>
+          <p>Your workspace environment has been successfully deployed. Start setting up custom habit checklist trackers, scheduling calendar events, and creating workspace objective lists to raise your readiness index and earn XP rank promotions!</p>
+          <p>Go conquer your routine!</p>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+          <p style="font-size: 11px; color: #64748b; margin-bottom: 0;">This email welcomes you to your new Habit Mastery account.</p>
+        </div>
+      `
+    };
+
+    const info = await activeTransporter.sendMail(mailOptions);
+    console.log(`✉️ Welcome email sent to: ${userEmail}. Message ID: ${info.messageId}`);
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) console.log(`✉️ Welcome Email Preview Link: ${previewUrl}`);
+  } catch (err) {
+    console.error('❌ Mailer: Error sending welcome email:', err.message);
+  }
+};
+
 const JWT_SECRET = process.env.JWT_SECRET || 'replace-with-secure-secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '4h';
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || ['http://localhost:5173'];
@@ -368,6 +470,7 @@ app.post('/api/auth/register', async (req, res) => {
       });
 
       const token = createToken(created);
+      sendRegisterEmail(normalizedEmail, displayName || normalizedEmail.split('@')[0]);
       return res.json({ token, ...buildUserPayload(created) });
     }
 
@@ -379,6 +482,7 @@ app.post('/api/auth/register', async (req, res) => {
     const user = getOrInitUser(normalizedEmail, displayName);
     user.passwordHash = passwordHash;
     const token = createToken(user);
+    sendRegisterEmail(normalizedEmail, displayName || normalizedEmail.split('@')[0]);
     return res.json({ token, ...buildUserPayload(user) });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -406,6 +510,7 @@ app.post('/api/auth/login', async (req, res) => {
       }
 
       const token = createToken(existing);
+      sendLoginEmail(normalizedEmail, existing.profile?.displayName || existing.displayName || normalizedEmail.split('@')[0]);
       return res.json({ token, ...buildUserPayload(existing) });
     }
 
@@ -420,6 +525,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const token = createToken(existing);
+    sendLoginEmail(normalizedEmail, existing.profile?.displayName || existing.displayName || normalizedEmail.split('@')[0]);
     return res.json({ token, ...buildUserPayload(existing) });
   } catch (err) {
     return res.status(500).json({ error: err.message });
