@@ -713,6 +713,85 @@ app.post('/api/ai/notion', async (req, res) => {
   return res.json({ tasks: generatedTasks });
 });
 
+// AI Planner Dashboard Orchestrator Generator
+app.post('/api/ai/planner', async (req, res) => {
+  const { prompt } = req.body;
+  
+  const systemInstruction = `
+    You are the "LevelUp AI Planner Orchestrator", an advanced assistant in the Habit Mastery Terminal.
+    Your task is to analyze the user's detailed schedule request, career goals, routine, and targets, and generate a complete setup for their dashboard in English.
+    You must output a JSON object with the following structure:
+    {
+      "workspace": {
+        "title": "A short, cool cyberpunk title for this project/syllabus",
+        "termDays": 7, // integer number of days for the timeline (minimum 3, maximum 14)
+        "tasks": [
+          { "id": "t_1", "text": "Task description for day 1", "day": 1 },
+          { "id": "t_2", "text": "Another task for day 1", "day": 1 },
+          { "id": "t_3", "text": "Task for day 2", "day": 2 }
+          // generate exactly 2 to 3 progressive tasks per day for each day
+        ]
+      },
+      "habits": [
+        // list of up to 4 habits to add to the habit tracker (e.g., "Gym Workout", "Drink 3L Water", "Solve 1 DSA", "Revision Checkup")
+      ],
+      "calendarEvents": [
+        // list of up to 3 key milestones to add to the calendar
+        // date format must be YYYY-MM-DD. Since today's year is 2026, schedule them in July/August/September 2026.
+        { "title": "Milestone title", "date": "2026-07-15", "type": "Goal", "time": "10:00 AM" }
+      ],
+      "notifications": [
+        // list of up to 3 welcome notifications/reminders
+        { "title": "Planner Synchronized", "body": "Custom notification message", "type": "system" }
+      ]
+    }
+    
+    Ensure all task descriptions are in English, actionable, and progress logically day-by-day.
+    If the prompt mentions a routine, integrate tasks and habits matching their wake-up, study hours, Gym, and Valorant rules.
+    You must return ONLY the raw JSON structure, matching the JSON schema precisely.
+  `;
+
+  try {
+    if (process.env.GEMINI_API_KEY) {
+      const responseText = await callGemini(systemInstruction, `Generate full dashboard config for the prompt: "${prompt}"`, true);
+      const parsed = JSON.parse(responseText);
+      if (parsed) {
+        return res.json(parsed);
+      }
+    }
+  } catch (err) {
+    console.error('⚠️ Gemini Planner Error:', err.message);
+  }
+
+  // Fallback config if Gemini fails or is not setup
+  return res.json({
+    workspace: {
+      title: "Career Placement Prep",
+      termDays: 5,
+      tasks: [
+        { id: "t_1", text: "Map out 7th sem study syllabus", day: 1 },
+        { id: "t_2", text: "Create GitHub resume placeholder repo", day: 1 },
+        { id: "t_3", text: "Read 1 technical system design article", day: 2 },
+        { id: "t_4", text: "Code simple binary search pattern", day: 2 },
+        { id: "t_5", text: "Draft professional resume intro", day: 3 },
+        { id: "t_6", text: "Study MVC backend framework routes", day: 3 },
+        { id: "t_7", text: "Integrate database tables in local script", day: 4 },
+        { id: "t_8", text: "Solve 1 medium LeetCode challenge", day: 4 },
+        { id: "t_9", text: "Practice mock interview introduction in front of mirror", day: 5 },
+        { id: "t_10", text: "Deploy initial side project live to render", day: 5 }
+      ]
+    },
+    habits: ["Exercise at Gym", "Drink 3L Water", "Solve 1 LeetCode", "Revision Checkup"],
+    calendarEvents: [
+      { title: "Placement Readiness Target", date: "2026-07-20", type: "Goal", time: "09:00 AM" },
+      { title: "Project MVP Presentation", date: "2026-07-25", type: "Review", time: "02:00 PM" }
+    ],
+    notifications: [
+      { title: "Planner Synchronized", body: "Your career goals schedule has been integrated successfully.", type: "system" }
+    ]
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

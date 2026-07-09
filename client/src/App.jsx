@@ -14,6 +14,7 @@ import { Achievements } from './pages/Achievements';
 import { NotionPage } from './pages/NotionPage';
 import { Settings } from './pages/Settings';
 import { Alerts } from './pages/Alerts';
+import AIPlanner from './pages/AIPlanner';
 
 // Toast Notification Item
 const ToastItem = ({ toast }) => {
@@ -60,8 +61,9 @@ const AppContent = () => {
     switch (currentTab) {
       case 'dashboard': return <Dashboard />;
       case 'habits': return <Habits />;
-      case 'analytics': return <Analytics />;
       case 'calendar': return <Calendar />;
+      case 'ai_planner': return <AIPlanner />;
+      case 'analytics': return <Analytics />;
       case 'achievements': return <Achievements />;
       case 'settings': return <Settings />;
       case 'alerts': return <Alerts />;
@@ -104,9 +106,6 @@ const AppContent = () => {
           ))}
         </div>
       </div>
-
-      {/* Persistent global floating AI Coach */}
-      <AICoach />
 
       {/* Full-screen cinematic Rank Promotion Overlay popup */}
       <RankPromotion />

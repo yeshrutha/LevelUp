@@ -791,7 +791,13 @@ export const AppProvider = ({ children }) => {
       icon: icon || '📄',
       termDays: parseInt(termDays) || 7,
       startDate: new Date().toISOString().split('T')[0],
-      tasks: taskList.map((t, idx) => ({ id: `t_${idx}_${Math.random().toString(36).substr(2, 5)}`, text: t })),
+      tasks: taskList.map((t, idx) => {
+        const id = `t_${idx}_${Math.random().toString(36).substr(2, 5)}`;
+        if (typeof t === 'object' && t !== null) {
+          return { id: t.id || id, text: t.text, day: t.day };
+        }
+        return { id, text: t };
+      }),
       completedLogs: {}
     };
     
