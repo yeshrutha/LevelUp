@@ -421,23 +421,6 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          {/* Mini AI Focus Panel */}
-          <div className="glass-panel p-5 rounded-xl border-white/10 bg-gradient-to-b from-primary/5 to-transparent relative">
-            <div className="flex items-center gap-2.5 mb-3">
-              <div className="p-1.5 bg-primary/20 border border-primary/20 rounded text-accent flex items-center justify-center">
-                <Bot size={14} className="text-cyan-400" />
-              </div>
-              <span className="text-[10px] uppercase font-futuristic font-bold text-white tracking-widest">AI Growth Focus</span>
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Maintain your streak milestones by completing:
-            </p>
-            <ul className="text-[11px] text-slate-400 mt-2 space-y-1.5 list-disc pl-4">
-              <li>Custom timeline checklists inside active Pages</li>
-              <li>Check off habit goals in Habit Tracker</li>
-              <li>Schedule target items in Calendar</li>
-            </ul>
-          </div>
 
         </div>
 
