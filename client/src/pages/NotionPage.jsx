@@ -60,29 +60,44 @@ export const NotionPage = ({ pageId }) => {
       // Local fallback generator matching prompt keywords
       setTimeout(() => {
         const pLower = aiPrompt.toLowerCase();
+        const termDays = page.termDays || 5;
         let tasks = [];
 
+        let templates = [
+          (d) => `Define daily objectives and review habit logs for Day ${d}`,
+          (d) => `Spend 30 minutes executing routine task priorities for Day ${d}`,
+          (d) => `Verify task completion and audit progress log for Day ${d}`
+        ];
+
         if (pLower.includes('dsa') || pLower.includes('algorithm') || pLower.includes('leetcode')) {
-          tasks = [
-            { id: 'nt1', text: 'Solve 1 LeetCode Easy & study optimal approach' },
-            { id: 'nt2', text: 'Solve 1 LeetCode Medium under 35 minutes' },
-            { id: 'nt3', text: 'Map out code complexity space/time limits' },
-            { id: 'nt4', text: 'Review standard recursion call trees' }
+          templates = [
+            (d) => `Day ${d}: Study core data structures (Arrays/Strings/Recursion)`,
+            (d) => `Day ${d}: Solve 1 algorithmic optimization challenge on LeetCode`,
+            (d) => `Day ${d}: Code complexity test cases (space & time bounds)`
           ];
         } else if (pLower.includes('web') || pLower.includes('react') || pLower.includes('node') || pLower.includes('frontend') || pLower.includes('backend')) {
-          tasks = [
-            { id: 'nt1', text: 'Write reusable UI components with dark glassmorphism' },
-            { id: 'nt2', text: 'Configure local express routes & error middleware' },
-            { id: 'nt3', text: 'Test endpoint outputs using curl or fetch calls' },
-            { id: 'nt4', text: 'Sync state hooks to localStorage and clear queues' }
+          templates = [
+            (d) => `Day ${d}: Build reusable functional components & hook structures`,
+            (d) => `Day ${d}: Set up layout styling grids and interactive states`,
+            (d) => `Day ${d}: Test API endpoint routing and state synchronization`
           ];
-        } else {
-          tasks = [
-            { id: 'nt1', text: 'Review active roadmap lessons' },
-            { id: 'nt2', text: 'Review 1 flagged active recall concept' },
-            { id: 'nt3', text: 'Log 45 minutes of keyboard coding exercises' },
-            { id: 'nt4', text: 'Solve 1 algorithmic puzzle challenge' }
+        } else if (pLower.includes('fit') || pLower.includes('gym') || pLower.includes('health') || pLower.includes('run') || pLower.includes('workout')) {
+          templates = [
+            (d) => `Day ${d}: Execute 15-minute dynamic muscle flexibility exercises`,
+            (d) => `Day ${d}: Complete cardiovascular stamina training & hydration check`,
+            (d) => `Day ${d}: Log active physical recovery stats and sleep schedules`
           ];
+        }
+
+        let taskCounter = 1;
+        for (let d = 1; d <= termDays; d++) {
+          templates.forEach((templateFn) => {
+            tasks.push({
+              id: `nt_fallback_${Date.now()}_${taskCounter++}`,
+              text: templateFn(d),
+              day: d
+            });
+          });
         }
 
         updateCustomPage({ ...page, tasks });
@@ -93,7 +108,11 @@ export const NotionPage = ({ pageId }) => {
   };
 
   // Recalculate Page Progress Metrics
-  const totalPossibleChecks = (page.tasks || []).length * page.termDays;
+  const isProgressive = (page.tasks || []).some(t => t.day !== undefined);
+  const totalPossibleChecks = isProgressive 
+    ? (page.tasks || []).length 
+    : (page.tasks || []).length * page.termDays;
+
   let totalChecked = 0;
   Object.values(page.completedLogs || {}).forEach(list => {
     totalChecked += (list || []).length;
@@ -103,8 +122,9 @@ export const NotionPage = ({ pageId }) => {
     ? Math.round((totalChecked / totalPossibleChecks) * 100)
     : 0;
 
-  const activeDayProgressPercent = (page.tasks || []).length > 0
-    ? Math.round((activeDayCompletedTasks.length / page.tasks.length) * 100)
+  const activeDayTasks = (page.tasks || []).filter(t => t.day === activeDayIdx + 1 || t.day === undefined);
+  const activeDayProgressPercent = activeDayTasks.length > 0
+    ? Math.round((activeDayCompletedTasks.length / activeDayTasks.length) * 100)
     : 0;
 
   return (
@@ -302,8 +322,9 @@ export const NotionPage = ({ pageId }) => {
                 const dStr = getDateForDayIndex(page.startDate, idx);
                 
                 // Count completions for this day
+                const dayTasks = (page.tasks || []).filter(t => t.day === idx + 1 || t.day === undefined);
                 const dayComps = page.completedLogs?.[dStr] || [];
-                const dayDone = page.tasks.length > 0 && dayComps.length === page.tasks.length;
+                const dayDone = dayTasks.length > 0 && dayComps.length >= dayTasks.length;
 
                 return (
                   <button
@@ -342,7 +363,7 @@ export const NotionPage = ({ pageId }) => {
             </div>
 
             <div className="space-y-2.5">
-              {page.tasks.map((task) => {
+              {page.tasks.filter(t => t.day === activeDayIdx + 1 || t.day === undefined).map((task) => {
                 const completed = activeDayCompletedTasks.includes(task.id);
                 
                 return (

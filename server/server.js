@@ -559,28 +559,52 @@ app.post('/api/ai/coach', async (req, res) => {
 
 // Notion-style AI Checklist Schedule Generator
 app.post('/api/ai/notion', (req, res) => {
-  const { prompt } = req.body;
+  const { prompt, termDays } = req.body;
+  const daysCount = parseInt(termDays) || 5;
   const pLower = (prompt || '').toLowerCase();
-  let generatedTasks = [];
+  const generatedTasks = [];
 
-  if (pLower.includes('dsa') || pLower.includes('algorithm') || pLower.includes('code')) {
-    generatedTasks = [
-      { id: 'nt1', text: 'Solve 1 Medium pattern puzzle under 35 minutes' },
-      { id: 'nt2', text: 'Trace data recursion call trees in a notebook' },
-      { id: 'nt3', text: 'Code custom hash maps to understand collisions' }
+  let templates = [
+    (d) => `Define daily objectives and review habit logs for Day ${d}`,
+    (d) => `Spend 30 minutes executing routine task priorities for Day ${d}`,
+    (d) => `Verify task completion and audit progress log for Day ${d}`
+  ];
+
+  if (pLower.includes('dsa') || pLower.includes('algorithm') || pLower.includes('leetcode') || pLower.includes('code')) {
+    templates = [
+      (d) => `Day ${d}: Study core data structures (Arrays/Strings/Recursion)`,
+      (d) => `Day ${d}: Solve 1 algorithmic optimization challenge on LeetCode`,
+      (d) => `Day ${d}: Code complexity test cases (space & time bounds)`
     ];
-  } else if (pLower.includes('fit') || pLower.includes('gym') || pLower.includes('health') || pLower.includes('run')) {
-    generatedTasks = [
-      { id: 'nt1', text: 'Complete dynamic body stretching routine' },
-      { id: 'nt2', text: 'Log 25-minute cardiovascular stamina run' },
-      { id: 'nt3', text: 'Hydrate continuously with 3 liters of water' }
+  } else if (pLower.includes('react') || pLower.includes('web') || pLower.includes('js') || pLower.includes('frontend') || pLower.includes('html') || pLower.includes('css')) {
+    templates = [
+      (d) => `Day ${d}: Build reusable functional components & hook structures`,
+      (d) => `Day ${d}: Set up layout styling grids and interactive states`,
+      (d) => `Day ${d}: Test API endpoint routing and state synchronization`
     ];
-  } else {
-    generatedTasks = [
-      { id: 'nt1', text: 'Read 1 chapter of technical literature' },
-      { id: 'nt2', text: 'Write down tomorrow\'s top 3 habit priorities' },
-      { id: 'nt3', text: 'Spend 45 minutes coding a micro-feature' }
+  } else if (pLower.includes('fit') || pLower.includes('gym') || pLower.includes('health') || pLower.includes('run') || pLower.includes('workout') || pLower.includes('sport')) {
+    templates = [
+      (d) => `Day ${d}: Execute 15-minute dynamic muscle flexibility exercises`,
+      (d) => `Day ${d}: Complete cardiovascular stamina training & hydration check`,
+      (d) => `Day ${d}: Log active physical recovery stats and sleep schedules`
     ];
+  } else if (pLower.includes('read') || pLower.includes('book') || pLower.includes('learn') || pLower.includes('english')) {
+    templates = [
+      (d) => `Day ${d}: Read 15 pages of literature and highlight key definitions`,
+      (d) => `Day ${d}: Summarize learnings into an active recall review deck`,
+      (d) => `Day ${d}: Teach the core concept to a peer or write a review log`
+    ];
+  }
+
+  let taskCounter = 1;
+  for (let d = 1; d <= daysCount; d++) {
+    templates.forEach((templateFn) => {
+      generatedTasks.push({
+        id: `nt_${Date.now()}_${taskCounter++}`,
+        text: templateFn(d),
+        day: d
+      });
+    });
   }
 
   res.json({ tasks: generatedTasks });

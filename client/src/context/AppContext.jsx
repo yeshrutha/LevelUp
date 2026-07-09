@@ -591,7 +591,10 @@ export const AppProvider = ({ children }) => {
       const anyHabitCheckedToday = Object.values(todayHabitLogs).some(Boolean);
 
       const hasCompletedPage = customPages.some(page => {
-        const totalPossible = (page.tasks || []).length * page.termDays;
+        const isProgressive = (page.tasks || []).some(t => t.day !== undefined);
+        const totalPossible = isProgressive 
+          ? (page.tasks || []).length 
+          : (page.tasks || []).length * page.termDays;
         if (totalPossible === 0) return false;
         let checked = 0;
         Object.values(page.completedLogs || {}).forEach(list => {

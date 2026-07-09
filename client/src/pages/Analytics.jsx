@@ -48,7 +48,10 @@ export const Analytics = () => {
   // 4. Custom Page Workspace completions
   const pagesLineData = customPages.length > 0
     ? customPages.map(page => {
-        const possible = (page.tasks || []).length * page.termDays;
+        const isProgressive = (page.tasks || []).some(t => t.day !== undefined);
+        const possible = isProgressive 
+          ? (page.tasks || []).length 
+          : (page.tasks || []).length * page.termDays;
         let checked = 0;
         Object.values(page.completedLogs || {}).forEach(list => {
           checked += (list || []).length;
