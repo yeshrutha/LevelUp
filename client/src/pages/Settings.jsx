@@ -41,7 +41,7 @@ export const Settings = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12 select-none max-w-2xl">
+    <div className="space-y-6 pb-12 select-none max-w-2xl mx-auto">
       
       {/* Back to Dashboard breadcrumb link */}
       <button 
