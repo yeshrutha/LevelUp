@@ -26,8 +26,8 @@ export const Achievements = () => {
     {
       id: 'xp_silver',
       title: 'Rank Ascent',
-      description: 'Earn 300+ XP to ascend your rank badge.',
-      requirement: 'Earn 300+ XP points',
+      description: 'Earn 1,000+ XP to ascend your rank badge.',
+      requirement: 'Earn 1,000+ XP points',
       unlocked: currentUnlocks.includes('xp_silver'),
       icon: Star
     },

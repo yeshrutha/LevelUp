@@ -603,7 +603,7 @@ export const AppProvider = ({ children }) => {
       const checks = [
         { id: 'lvl_2', title: 'Growth Initiate', condition: user.level >= 2 },
         { id: 'lvl_5', title: 'Growth Master', condition: user.level >= 5 },
-        { id: 'xp_silver', title: 'Rank Ascent', condition: user.xp >= 300 },
+        { id: 'xp_silver', title: 'Rank Ascent', condition: user.xp >= 1000 },
         { id: 'habit_today', title: 'Daily Discipline', condition: anyHabitCheckedToday },
         { id: 'habit_pioneer', title: 'Atomic Habits', condition: habitList.length >= 4 },
         { id: 'page_first', title: 'Workspace Architect', condition: customPages.length >= 1 },
