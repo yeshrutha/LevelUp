@@ -43,7 +43,7 @@ export const NotionPage = ({ pageId }) => {
     setAiLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/ai/notion', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/ai/notion`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: aiPrompt, termDays: page.termDays })
@@ -51,7 +51,7 @@ export const NotionPage = ({ pageId }) => {
       const data = await response.json();
       
       setTimeout(() => {
-        updateCustomPage(page.id, { tasks: data.tasks });
+        updateCustomPage({ ...page, tasks: data.tasks });
         setAiLoading(false);
         setAiPrompt('');
       }, 1000);
@@ -85,7 +85,7 @@ export const NotionPage = ({ pageId }) => {
           ];
         }
 
-        updateCustomPage(page.id, { tasks });
+        updateCustomPage({ ...page, tasks });
         setAiLoading(false);
         setAiPrompt('');
       }, 1000);

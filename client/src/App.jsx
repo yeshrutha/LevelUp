@@ -13,7 +13,6 @@ import { Calendar } from './pages/Calendar';
 import { Achievements } from './pages/Achievements';
 import { NotionPage } from './pages/NotionPage';
 import { Settings } from './pages/Settings';
-import { Alerts } from './pages/Alerts';
 
 // Toast Notification Item
 const ToastItem = ({ toast }) => {
@@ -64,7 +63,6 @@ const AppContent = () => {
       case 'calendar': return <Calendar />;
       case 'achievements': return <Achievements />;
       case 'settings': return <Settings />;
-      case 'alerts': return <Alerts />;
       default: return <Dashboard />;
     }
   };

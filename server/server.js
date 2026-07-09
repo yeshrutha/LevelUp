@@ -1,38 +1,50 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
+const JWT_SECRET = process.env.JWT_SECRET || 'replace-with-secure-secret';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '4h';
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || ['http://localhost:5173'];
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(helmet());
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
 // In-memory fallback database for multi-user isolation
 let localDB = {};
 
-const getOrInitUser = (email) => {
+const createUserProfile = (email, name = '') => ({
+  displayName: name || email.split('@')[0],
+  email,
+  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
+  xp: 0,
+  level: 1,
+  rank: 'Iron I',
+  streak: 0,
+  readiness: 0
+});
+
+const getOrInitUser = (email, name = '') => {
   const key = (email || 'anonymous').toLowerCase().trim();
   if (!localDB[key]) {
     localDB[key] = {
-      profile: {
-        xp: 0,
-        level: 1,
-        rank: 'Iron I',
-        streak: 0,
-        readiness: 0,
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
-        displayName: key.split('@')[0]
-      },
+      email: key,
+      passwordHash: null,
+      profile: createUserProfile(key, name),
       habits: {},
       habitList: ['Exercise', 'Drink Water', 'Read Book'],
       customPages: [],
       calendar: [],
-      goal: { title: '', targetDate: '' },
-      alerts: []
+      goal: { title: '', targetDate: '' }
     };
   }
   return localDB[key];
@@ -58,35 +70,56 @@ if (mongoURI) {
 // Schemas & Models
 const UserDataSchema = new mongoose.Schema({
   email: { type: String, unique: true },
+  passwordHash: { type: String, select: false },
   profile: { type: Object, default: {} },
   habits: { type: Object, default: {} },
   habitList: { type: Array, default: ['Exercise', 'Drink Water', 'Read Book'] },
   customPages: { type: Array, default: [] },
   calendar: { type: Array, default: [] },
   goal: { type: Object, default: {} },
-  alerts: { type: Array, default: [] },
   updatedAt: { type: Date, default: Date.now }
 });
 
 const UserData = mongoose.models.UserData || mongoose.model('UserData', UserDataSchema);
 
-// Auth Middleware mapping headers to user profiles
+const createToken = (user) => jwt.sign(
+  { uid: user.email, email: user.email },
+  JWT_SECRET,
+  { expiresIn: JWT_EXPIRES_IN }
+);
+
+const buildUserPayload = (userData) => ({
+  profile: userData.profile,
+  habits: userData.habits,
+  habitList: userData.habitList,
+  customPages: userData.customPages,
+  calendar: userData.calendar,
+  goal: userData.goal
+});
+
+// Auth Middleware verifying JWT bearer tokens for protected API routes
 const authMiddleware = async (req, res, next) => {
+  if (req.path.startsWith('/api/auth')) {
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    req.user = { uid: 'anonymous', email: 'anonymous@levelup.io' };
-    return next();
+    return res.status(401).json({ error: 'Missing authorization header' });
   }
 
   const token = authHeader.split(' ')[1];
   if (!token) {
-    req.user = { uid: 'anonymous', email: 'anonymous@levelup.io' };
-    return next();
+    return res.status(401).json({ error: 'Invalid authorization header format' });
   }
 
-  // Treat Bearer token as active user email for isolation
-  req.user = { uid: token, email: token };
-  next();
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = { uid: payload.uid, email: payload.email };
+    return next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
 };
 
 app.use(authMiddleware);
@@ -305,36 +338,91 @@ app.post('/api/goal', async (req, res) => {
   }
 });
 
-// GET Alerts
-app.get('/api/alerts', async (req, res) => {
+// --- Authentication Routes ---
+app.post('/api/auth/register', async (req, res) => {
+  const { email, password, displayName } = req.body;
+  if (!email || !password || password.length < 8) {
+    return res.status(400).json({ error: 'Email and a password of at least 8 characters are required.' });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const passwordHash = await bcrypt.hash(password, 12);
+
   try {
     if (isConnectedToMongo) {
-      const data = await UserData.findOne({ email: req.user.email });
-      return res.json({ alerts: data ? data.alerts : [] });
-    } else {
-      return res.json({ alerts: getOrInitUser(req.user.email).alerts });
+      const existing = await UserData.findOne({ email: normalizedEmail });
+      if (existing) {
+        return res.status(409).json({ error: 'Email already registered.' });
+      }
+
+      const profile = createUserProfile(normalizedEmail, displayName);
+      const created = await UserData.create({
+        email: normalizedEmail,
+        passwordHash,
+        profile,
+        habits: {},
+        habitList: ['Exercise', 'Drink Water', 'Read Book'],
+        customPages: [],
+        calendar: [],
+        goal: { title: '', targetDate: '' }
+      });
+
+      const token = createToken(created);
+      return res.json({ token, ...buildUserPayload(created) });
     }
+
+    const existing = localDB[normalizedEmail];
+    if (existing && existing.passwordHash) {
+      return res.status(409).json({ error: 'Email already registered.' });
+    }
+
+    const user = getOrInitUser(normalizedEmail, displayName);
+    user.passwordHash = passwordHash;
+    const token = createToken(user);
+    return res.json({ token, ...buildUserPayload(user) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-// POST Alerts Sync
-app.post('/api/alerts', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
   try {
     if (isConnectedToMongo) {
-      await UserData.updateOne(
-        { email: req.user.email },
-        { $set: { alerts: req.body.alerts, updatedAt: new Date() } },
-        { upsert: true }
-      );
-      return res.json({ success: true });
-    } else {
-      getOrInitUser(req.user.email).alerts = req.body.alerts;
-      return res.json({ success: true });
+      const existing = await UserData.findOne({ email: normalizedEmail }).select('+passwordHash');
+      if (!existing || !existing.passwordHash) {
+        return res.status(401).json({ error: 'Invalid email or password.' });
+      }
+
+      const validPassword = await bcrypt.compare(password, existing.passwordHash);
+      if (!validPassword) {
+        return res.status(401).json({ error: 'Invalid email or password.' });
+      }
+
+      const token = createToken(existing);
+      return res.json({ token, ...buildUserPayload(existing) });
     }
+
+    const existing = localDB[normalizedEmail];
+    if (!existing || !existing.passwordHash) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const validPassword = await bcrypt.compare(password, existing.passwordHash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const token = createToken(existing);
+    return res.json({ token, ...buildUserPayload(existing) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 

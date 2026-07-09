@@ -1,20 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
-import { MessageSquare, X, Send, Bot, Sparkles, Terminal } from 'lucide-react';
+import { X, Send, Bot, Sparkles } from 'lucide-react';
 
 export const AICoach = () => {
-  const { user, leetcode, projects } = useApp();
+  const { user } = useApp();
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([
     {
       id: 'm1',
       sender: 'ai',
-      text: `Good Evening, Cadet Penguin. I am your LevelUp AI Coach. I monitor your placements readiness (currently at ${user.readiness}%). How can I assist your career prep today?`,
+      text: `Good Evening, Cadet Penguin. I am your LevelUp AI Coach. I monitor your readiness index (currently at ${user?.readiness || 0}%). How can I assist your growth journey today?`,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
+  const leetcodeCount = user?.leetcodeCount || 0;
+  const projectsCount = user?.projectsCount || 0;
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -41,14 +44,14 @@ export const AICoach = () => {
 
     // Call Local Backend or use fallback simulated coach response
     try {
-      const response = await fetch('http://localhost:5000/api/ai/coach', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/ai/coach`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: msg,
           stats: {
-            leetcodeCount: leetcode.length,
-            projectsCount: projects.length,
+            leetcodeCount,
+            projectsCount,
             readiness: user.readiness
           }
         })
@@ -72,9 +75,9 @@ export const AICoach = () => {
         const lowText = msg.toLowerCase();
         
         if (lowText.includes('dsa') || lowText.includes('leetcode')) {
-          reply = `With ${leetcode.length} problems solved, I recommend focusing on DSA Trees and Hashmaps. Dedicate 60 minutes to solving 2 medium exercises today!`;
+          reply = `Focus on pattern families and time complexity. Aim for another ${leetcodeCount + 1} solid practice problems today to build momentum.`;
         } else if (lowText.includes('project')) {
-          reply = `You have ${projects.length} projects registered. Make sure at least one is fully marked "Interview Ready" and has a valid Vercel/Render live link!`;
+          reply = `You have ${projectsCount} project milestone${projectsCount === 1 ? '' : 's'} tracked. Turn at least one into an interview-ready case study with clear outcomes.`;
         } else if (lowText.includes('resume') || lowText.includes('interview')) {
           reply = "Ensure your resume highlights quantifiable results (e.g., 'Optimized query latency by 40%'). Practice explaining this vocally in our Communication tab.";
         }

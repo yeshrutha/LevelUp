@@ -1,6 +1,6 @@
-# LevelUp OS 🚀
+# LevelUp | Habit Mastery Terminal 🚀
 
-> A premium, gamified, and highly customizable **Personal Growth Operating System** designed to track habits, manage custom workspace milestones, and level up your daily discipline.
+> A premium, gamified, and highly customizable **Habit Mastery Terminal** designed to track habits, manage custom workspace milestones, and level up your daily discipline.
 
 ---
 
@@ -31,11 +31,10 @@
   - < 50% day completion: awards **+3 XP** per task.
 - Built-in anti-exploit trackers to subtract correct XP sums when unchecking items.
 
-### 5. 🔔 Extraordinary Alerts Hub & Sound Synthesizer
-- **Logs Center**: Separate tab displaying telemetry alerts for XP updates, promotions, and system reports.
-- **Web Audio API Synth**: A native synthesizer generating ascending frequency chords for achievements, level progress, and rank promotion fanfares. Runs natively on the browser with no external assets.
-- **Sound bench test**: Live buttons to test and play synth chimes.
-- **Floating Toasts**: Cyberpunk sliding banners that pop up in the top-right when updates occur.
+### 5. 🌟 Smart Progress Notifications & Achievement Chimes
+- Lightweight toast notifications keep you informed about level milestones and status updates.
+- Native Web Audio API chimes reward progress with immersive synth tones for promotions and streaks.
+- Notifications are designed to feel like a gamified progression system, not an intrusive alert feed.
 
 ### 6. 📱 Standalone Desktop PWA Shell
 - Standard PWA manifest (`manifest.json`) and caching service worker (`sw.js`).
@@ -49,11 +48,12 @@
 ---
 
 ## 🛠️ Technology Stack
-- **Frontend Core**: React 18, Vite 8, TailwindCSS
+- **Frontend Core**: React 19, Vite 8, TailwindCSS
 - **Animations**: Framer Motion
 - **Icons**: Lucide React
 - **Audio synthesis**: Native Web Audio API
-- **Backend Server**: Node.js, Express, Cors
+- **Backend Server**: Node.js, Express, Helmet, CORS, JSON Web Token (JWT) authentication
+- **Security**: bcrypt password hashing, token-based session handling, environment-driven CORS allow list
 - **Database Storage**: MongoDB (Mongoose) with silent local memory database failover
 
 ---
@@ -67,12 +67,19 @@ npm run install-all
 ```
 
 ### 2. Configure Environment Variables
-Create a `.env` file in the `server` directory if you wish to use MongoDB:
+Create a `.env` file in the `server` directory to configure backend authentication and MongoDB support:
 ```env
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/levelup
+JWT_SECRET=replace-with-a-strong-secret
+JWT_EXPIRES_IN=4h
+ALLOWED_ORIGINS=http://localhost:5173
 ```
-*Note: If no connection string is provided, the backend falls back to the user-partitioned memory database.*
+Create a `.env` file in the `client` directory to point the frontend at the API server:
+```env
+VITE_API_BASE_URL=http://localhost:5000
+```
+*Note: If no MongoDB URI is provided, the backend falls back to an in-memory multi-user database.*
 
 ### 3. Run Development Servers
 Start both the Vite client server and the Express API server concurrently:

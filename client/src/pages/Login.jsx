@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { motion } from 'framer-motion';
-import { Shield, Sparkles, Terminal, Flame, User, Mail, AlertTriangle } from 'lucide-react';
+import { Shield, Sparkles, Terminal, User, Mail, AlertTriangle } from 'lucide-react';
 
 export const Login = () => {
   const { loginUser } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,22 +33,13 @@ export const Login = () => {
     
     // Simulate initial workspace sync load
     setTimeout(async () => {
-      const res = await loginUser(name.trim(), email.trim(), false, isSignUp);
+      const res = await loginUser(name.trim(), email.trim(), password, false, isSignUp);
       setLoading(false);
       
       if (res && !res.success) {
         setErrorMsg(res.error);
       }
     }, 1200);
-  };
-
-  const handleDemoLogin = () => {
-    setLoading(true);
-    setErrorMsg('');
-    setTimeout(() => {
-      setLoading(false);
-      loginUser('Penguin Cadet', 'cadet@levelup.io', true);
-    }, 1000);
   };
 
   return (
@@ -85,7 +77,7 @@ export const Login = () => {
             LevelUp
           </h1>
           <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-slate-400 font-display">
-            Personal Growth Operating System
+            Habit Mastery Terminal
           </p>
         </div>
 
@@ -156,6 +148,22 @@ export const Login = () => {
               />
             </div>
           </div>
+          <div className="space-y-1">
+            <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-semibold tracking-wider">
+              Password
+            </label>
+            <div className="relative">
+              <Shield size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Minimum 8 characters"
+                className="w-full bg-slate-900 border border-white/5 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 transition-colors"
+              />
+            </div>
+          </div>
 
           {loading ? (
             <div className="w-full py-3 rounded bg-slate-900 border border-white/10 flex items-center justify-center gap-3">
@@ -170,7 +178,7 @@ export const Login = () => {
                 type="submit"
                 className="w-full py-3 bg-gradient-to-r from-primary to-accent hover:from-primary-light hover:to-accent-light text-slate-950 font-futuristic font-bold text-xs tracking-widest uppercase rounded shadow-lg transition-all duration-200 hover:shadow-glow-accent cursor-pointer active:scale-95"
               >
-                {isSignUp ? 'Authenticate Fresh Account' : 'Access Your Workspace'}
+                {isSignUp ? 'Create Secure Account' : 'Sign In to LevelUp'}
               </button>
             </div>
           )}
