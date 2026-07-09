@@ -136,7 +136,7 @@ export const AICoach = () => {
                 </div>
                 <div>
                   <h3 className="font-futuristic font-bold text-sm text-white flex items-center gap-1.5">
-                    Penguin AI Coach <Sparkles size={12} className="text-cyan-400 animate-pulse" />
+                    LevelUp AI Coach <Sparkles size={12} className="text-cyan-400 animate-pulse" />
                   </h3>
                   <p className="text-[10px] text-slate-400 font-display">READYNESS INDEX: {user.readiness}%</p>
                 </div>
