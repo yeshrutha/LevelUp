@@ -145,7 +145,7 @@ export const NotionPage = ({ pageId }) => {
                     <button
                       key={emoji}
                       onClick={() => {
-                        updateCustomPage(page.id, { icon: emoji });
+                        updateCustomPage({ ...page, icon: emoji });
                         setShowEmojiPicker(false);
                       }}
                       className="p-1 hover:bg-white/5 rounded text-lg cursor-pointer transition-colors"
@@ -162,7 +162,7 @@ export const NotionPage = ({ pageId }) => {
           <input 
             type="text"
             value={page.title}
-            onChange={(e) => updateCustomPage(page.id, { title: e.target.value })}
+            onChange={(e) => updateCustomPage({ ...page, title: e.target.value })}
             placeholder="Untitled Workspace"
             className="text-2xl font-black font-display bg-transparent text-white border-b border-transparent hover:border-white/10 focus:border-cyan-400/40 focus:outline-none py-1 select-text transition-colors"
           />
@@ -171,7 +171,10 @@ export const NotionPage = ({ pageId }) => {
 
         {/* Delete Page action */}
         <button
-          onClick={() => deleteCustomPage(page.id)}
+          onClick={() => {
+          deleteCustomPage(page.id);
+          setCurrentTab('dashboard');
+        }}
           className="absolute top-4 right-4 p-2 bg-slate-900/60 hover:bg-rose-500/10 border border-white/10 hover:border-rose-500/30 rounded text-slate-400 hover:text-rose-400 transition-all cursor-pointer"
           title="Delete Workspace Page"
         >
@@ -200,7 +203,7 @@ export const NotionPage = ({ pageId }) => {
               min="1"
               max="30"
               value={page.termDays}
-              onChange={(e) => updateCustomPage(page.id, { termDays: parseInt(e.target.value) })}
+              onChange={(e) => updateCustomPage({ ...page, termDays: parseInt(e.target.value) })}
               className="flex-1 accent-cyan-400 bg-slate-950 rounded h-1.5 cursor-pointer"
             />
           </div>
