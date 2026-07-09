@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
-import { X, Send, Bot, Sparkles } from 'lucide-react';
+import { X, Send, Bot, Sparkles, Trash2 } from 'lucide-react';
 
 export const AICoach = () => {
   const { user } = useApp();
@@ -106,6 +106,23 @@ export const AICoach = () => {
     handleSend(prompt);
   };
 
+  const handleClearChat = () => {
+    if (window.confirm("Are you sure you want to clear your AI Coach chat history?")) {
+      const defaultMsg = [
+        {
+          id: 'm1',
+          sender: 'ai',
+          text: `Hello, ${user?.displayName || 'User'}. I am your Habit Mastery AI Coach. I monitor your readiness index (currently at ${user?.readiness || 0}%). How can I assist your growth journey today?`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ];
+      setMessages(defaultMsg);
+      if (user?.email) {
+        localStorage.setItem(`levelup_chat_${user.email}`, JSON.stringify(defaultMsg));
+      }
+    }
+  };
+
   return (
     <>
       {/* Floating Toggle Button */}
@@ -141,12 +158,21 @@ export const AICoach = () => {
                   <p className="text-[10px] text-slate-400 font-display">READYNESS INDEX: {user.readiness}%</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsOpen(false)} 
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleClearChat}
+                  className="text-slate-500 hover:text-rose-400 transition-colors p-1 rounded hover:bg-white/5 cursor-pointer"
+                  title="Clear Chat History"
+                >
+                  <Trash2 size={15} />
+                </button>
+                <button 
+                  onClick={() => setIsOpen(false)} 
+                  className="text-slate-400 hover:text-white transition-colors p-1 rounded hover:bg-white/5 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             {/* Message Area */}
