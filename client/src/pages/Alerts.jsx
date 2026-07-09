@@ -83,15 +83,6 @@ export const Alerts = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 select-none font-display pb-10">
-      
-      {/* Exit to dashboard navigation */}
-      <button 
-        onClick={() => setCurrentTab('dashboard')}
-        className="flex items-center gap-1.5 text-[10px] font-bold font-futuristic text-slate-500 hover:text-accent uppercase tracking-widest transition-colors cursor-pointer group mb-2"
-      >
-        <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
-        <span>Back to Dashboard</span>
-      </button>
 
       {/* Header bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
