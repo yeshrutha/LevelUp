@@ -64,16 +64,7 @@ export default function AIPlanner() {
 
       const data = await response.json();
 
-      // 1. Create Workspace Page
-      let newPage = null;
-      if (data.workspace) {
-        const title = data.workspace.title || "My AI Syllabus";
-        const days = data.workspace.termDays || 7;
-        const tasks = data.workspace.tasks || [];
-        newPage = createCustomPage(title, '🤖', days, tasks);
-      }
-
-      // 2. Add Habits
+      // 1. Add Habits
       let habitsAdded = 0;
       if (Array.isArray(data.habits)) {
         data.habits.forEach(h => {
@@ -84,7 +75,7 @@ export default function AIPlanner() {
         });
       }
 
-      // 3. Add Calendar Events
+      // 2. Add Calendar Events
       let eventsAdded = 0;
       if (Array.isArray(data.calendarEvents)) {
         data.calendarEvents.forEach(e => {
@@ -98,7 +89,7 @@ export default function AIPlanner() {
         });
       }
 
-      // 4. Trigger Notifications
+      // 3. Trigger Notifications
       if (Array.isArray(data.notifications)) {
         setNotifications(prev => [
           ...data.notifications.map(n => ({
@@ -114,14 +105,11 @@ export default function AIPlanner() {
       }
 
       setResult({
-        workspaceTitle: data.workspace?.title || "Career Placement Prep",
-        termDays: data.workspace?.termDays || 5,
         habitsCount: habitsAdded || data.habits?.length || 0,
-        eventsCount: eventsAdded || data.calendarEvents?.length || 0,
-        pageId: newPage?.id
+        eventsCount: eventsAdded || data.calendarEvents?.length || 0
       });
 
-      triggerToast('Environment Deployed', 'Your new personalized workspace is active!', 'success');
+      triggerToast('Environment Deployed', 'Your personalized routine has been instantiated!', 'success');
     } catch (err) {
       console.error(err);
       triggerToast('Generation Failed', 'Could not parse configuration setup. Reverting to fallbacks.', 'error');
@@ -130,12 +118,8 @@ export default function AIPlanner() {
     }
   };
 
-  const handleLaunchWorkspace = () => {
-    if (result?.pageId) {
-      setCurrentTab(`page_${result.pageId}`);
-    } else {
-      setCurrentTab('dashboard');
-    }
+  const handleOpenDashboard = () => {
+    setCurrentTab('dashboard');
   };
 
   return (
@@ -154,7 +138,7 @@ export default function AIPlanner() {
           </h2>
           <p className="text-xs text-slate-400 font-display leading-relaxed max-w-2xl">
             Input your targets (courses, placement readiness, gym routines, gaming hours). 
-            The LevelUp AI Orchestrator will automatically instantiate a customized daily study syllabus, trackable habits, calendar milestones, and alert priorities.
+            The LevelUp AI Orchestrator will automatically instantiate trackable daily habits, calendar milestones, and alert priorities.
           </p>
         </div>
       </div>
@@ -255,16 +239,7 @@ Practice DSA and coding every Wednesday/Thursday.`}
           </div>
 
           {/* Configuration Summary Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-950/50 border border-white/5 p-4 rounded-lg space-y-2">
-              <div className="flex items-center gap-2 text-cyan-400">
-                <List size={16} />
-                <span className="text-[10px] font-futuristic font-bold tracking-wider uppercase">Workspace Page</span>
-              </div>
-              <p className="text-xs font-bold text-white">{result.workspaceTitle}</p>
-              <p className="text-[9px] text-slate-500">{result.termDays} Days Progressive Timeline</p>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-slate-950/50 border border-white/5 p-4 rounded-lg space-y-2">
               <div className="flex items-center gap-2 text-indigo-400">
                 <Brain size={16} />
@@ -297,10 +272,10 @@ Practice DSA and coding every Wednesday/Thursday.`}
             </button>
             
             <button
-              onClick={handleLaunchWorkspace}
+              onClick={handleOpenDashboard}
               className="flex-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-accent border border-cyan-500/30 hover:border-cyan-500/50 py-3 rounded-lg text-xs font-bold font-futuristic tracking-widest uppercase transition-all shadow-glow-accent cursor-pointer flex items-center justify-center gap-1.5"
             >
-              Launch New Workspace
+              Open Dashboard
               <ArrowRight size={14} />
             </button>
           </div>
