@@ -688,17 +688,19 @@ export const AppProvider = ({ children }) => {
 
   // Custom Page creation helpers
   const createCustomPage = (title, icon, termDays, tasks) => {
+    const taskList = tasks || [];
     const newPage = {
       id: `cp_${Math.random().toString(36).substr(2, 9)}`,
       title,
       icon: icon || '📄',
       termDays: parseInt(termDays) || 7,
       startDate: new Date().toISOString().split('T')[0],
-      tasks: tasks.map((t, idx) => ({ id: `t_${idx}_${Math.random().toString(36).substr(2, 5)}`, text: t })),
+      tasks: taskList.map((t, idx) => ({ id: `t_${idx}_${Math.random().toString(36).substr(2, 5)}`, text: t })),
       completedLogs: {}
     };
     
     setCustomPages(prev => [...prev, newPage]);
+    setCurrentTab(`page_${newPage.id}`);
     addXP(10, `Created custom workspace page: "${newPage.title}"`);
     triggerToast('Workspace Created', `Page "${title}" is ready!`, 'success');
     return newPage;
