@@ -162,10 +162,10 @@ export const Alerts = () => {
         <div className="glass-panel p-4 rounded-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl" />
           <span className="text-[9px] uppercase font-futuristic text-slate-400 tracking-widest block mb-1">
-            Notification Chimes
+            Audio Sounds
           </span>
           <span className="text-2xl font-black text-cyan-400 flex items-center gap-1.5 uppercase text-xs mt-1.5 tracking-wider">
-            {isMuted ? 'MUTED' : 'ACTIVE SYNTH'}
+            {isMuted ? 'MUTED' : 'ACTIVE'}
           </span>
         </div>
       </div>
@@ -176,11 +176,11 @@ export const Alerts = () => {
         
         <h2 className="text-xs font-black font-futuristic uppercase tracking-widest text-slate-200 mb-3 flex items-center gap-2">
           <Terminal size={14} className="text-accent" />
-          Web Audio Oscillator Synth Bench
+          Sound Effects Test Bench
         </h2>
         
         <p className="text-[9px] text-slate-400 uppercase tracking-wider mb-4 leading-relaxed max-w-xl">
-          Test real-time browser audio frequency sweeps. LevelUp Terminal generates chimes natively using oscillator nodes without loaded assets.
+          Test the application's sound effects and notification chimes directly in your browser.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -208,7 +208,7 @@ export const Alerts = () => {
                 XP Progress Chord
               </span>
               <span className="text-[8px] text-slate-500 block uppercase font-display mt-0.5">
-                C-Major Arpeggio sequence
+                Ascending melody chord
               </span>
             </div>
             <Play size={10} className="text-accent fill-accent shrink-0 ml-2" />
@@ -223,7 +223,7 @@ export const Alerts = () => {
                 Rank Promotion Fanfare
               </span>
               <span className="text-[8px] text-slate-500 block uppercase font-display mt-0.5">
-                Cinematic Sub drop riser
+                Cinematic promotion fanfare
               </span>
             </div>
             <Play size={10} className="text-accent fill-accent shrink-0 ml-2" />
@@ -233,19 +233,28 @@ export const Alerts = () => {
 
       {/* Filter Tabs */}
       <div className="flex gap-1.5 border-b border-white/5 pb-0.5 overflow-x-auto whitespace-nowrap scrollbar-none">
-        {['all', 'xp', 'rank', 'calendar', 'system'].map((filterType) => (
-          <button
-            key={filterType}
-            onClick={() => setActiveFilter(filterType)}
-            className={`px-4 py-2 border-b-2 text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all ${
-              activeFilter === filterType 
-                ? 'border-accent text-white bg-slate-950/20' 
-                : 'border-transparent text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            {filterType === 'all' ? 'All Alerts' : `${filterType} logs`}
-          </button>
-        ))}
+        {['all', 'xp', 'rank', 'calendar', 'system'].map((filterType) => {
+          const filterLabels = {
+            all: 'All Notifications',
+            xp: 'XP Logs',
+            rank: 'Rank Upgrades',
+            calendar: 'Calendar Logs',
+            system: 'System Logs'
+          };
+          return (
+            <button
+              key={filterType}
+              onClick={() => setActiveFilter(filterType)}
+              className={`px-4 py-2 border-b-2 text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all ${
+                activeFilter === filterType 
+                  ? 'border-accent text-white bg-slate-950/20' 
+                  : 'border-transparent text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {filterLabels[filterType]}
+            </button>
+          );
+        })}
       </div>
 
       {/* Alerts Logs List */}
