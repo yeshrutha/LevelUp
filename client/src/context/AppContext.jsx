@@ -316,6 +316,31 @@ export const AppProvider = ({ children }) => {
       const registered = registeredStr ? JSON.parse(registeredStr) : ['cadet@levelup.io'];
 
       if (isSignUp) {
+        let registered = ['cadet@levelup.io'];
+        try {
+          if (registeredStr) {
+            registered = JSON.parse(registeredStr);
+          }
+        } catch (e) {
+          console.warn('Registered list parse error, resetting:', e);
+        }
+
+        // Try registering on backend first to trigger transactional welcome email
+        try {
+          const regRes = await fetch('http://localhost:5000/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailKey, password, displayName: name.trim() })
+          });
+          
+          if (!regRes.ok) {
+            const errData = await regRes.json();
+            return { success: false, error: errData.error || 'Failed to create account.' };
+          }
+        } catch (backendErr) {
+          console.warn('Backend server offline during signup, using local fallback:', backendErr.message);
+        }
+
         if (registered.includes(emailKey)) {
           return { success: false, error: 'Email already exists. Use Sign In instead!' };
         }
@@ -345,6 +370,7 @@ export const AppProvider = ({ children }) => {
         localStorage.setItem(`levelup_calendar_${emailKey}`, JSON.stringify([]));
         localStorage.setItem(`levelup_custom_pages_${emailKey}`, JSON.stringify([]));
         localStorage.setItem(`levelup_dashboard_goal_${emailKey}`, JSON.stringify(freshGoal));
+        localStorage.setItem('levelup_active_email', emailKey);
 
         setUser(freshUser);
         setHabitList(freshHabitList);

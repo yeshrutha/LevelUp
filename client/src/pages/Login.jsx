@@ -33,11 +33,16 @@ export const Login = () => {
     
     // Simulate initial workspace sync load
     setTimeout(async () => {
-      const res = await loginUser(name.trim(), email.trim(), password, false, isSignUp);
-      setLoading(false);
-      
-      if (res && !res.success) {
-        setErrorMsg(res.error);
+      try {
+        const res = await loginUser(name.trim(), email.trim(), password, false, isSignUp);
+        setLoading(false);
+        
+        if (res && !res.success) {
+          setErrorMsg(res.error);
+        }
+      } catch (err) {
+        setLoading(false);
+        setErrorMsg('Authentication error: ' + err.message);
       }
     }, 1200);
   };
