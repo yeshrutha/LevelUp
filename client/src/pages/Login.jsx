@@ -31,8 +31,8 @@ export const Login = () => {
     setLoading(true);
     
     // Simulate initial workspace sync load
-    setTimeout(() => {
-      const res = loginUser(name.trim(), email.trim(), false, isSignUp);
+    setTimeout(async () => {
+      const res = await loginUser(name.trim(), email.trim(), false, isSignUp);
       setLoading(false);
       
       if (res && !res.success) {

@@ -212,3 +212,24 @@ body:not(.dark) .text-neon-indigo {
   text-shadow: none !important;
   color: #7C3AED !important;
 }
+
+/* ==========================================
+   🔔 Toast Notifications System Animations
+   ========================================== */
+@keyframes slideIn {
+  0% { transform: translateX(120%) scale(0.9); opacity: 0; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+@keyframes shrinkProgress {
+  0% { width: 100%; }
+  100% { width: 0%; }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-shrink-progress {
+  animation: shrinkProgress 4s linear forwards;
+}

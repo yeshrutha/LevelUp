@@ -30,6 +30,9 @@ export const RANK_COLORS = {
 
 // Web Audio API Promotion Sound Synthesizer
 export const playPromotionSound = () => {
+  const isMuted = localStorage.getItem('levelup_sound_muted') === 'true';
+  if (isMuted) return;
+
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const now = ctx.currentTime;
@@ -135,14 +138,100 @@ export const AppProvider = ({ children }) => {
     { id: 'dm3', task: 'Maintain Streak Checkpoints', xp: 20, completed: false }
   ]);
 
-  // Notifications center
-  const [notifications, setNotifications] = useState([
-    { id: 'n1', title: 'System Initialized', body: 'Welcome to LevelUp. Enter your milestones to raise your readiness score.', type: 'system', read: false, time: 'Just now' }
-  ]);
+  // Notifications / Alerts Log
+  const [notifications, setNotifications] = useState(() => {
+    const saved = localStorage.getItem('levelup_notifications');
+    return saved ? JSON.parse(saved) : [
+      { id: 'n1', title: 'System Initialized', body: 'Welcome to LevelUp. Enter your milestones to raise your readiness score.', type: 'system', read: false, time: 'Just now' }
+    ];
+  });
 
-  // Custom User Sign-In Action (Supports Demo Mode or Fresh Email registration)
-  // Custom User Sign-In Action (Supports Demo Mode or Fresh Email registration)
-  const loginUser = (name, email, useDemoData = false, isSignUp = false) => {
+  // Floating Toasts Queue
+  const [toasts, setToasts] = useState([]);
+
+  // Audio mute triggers
+  const [isMuted, setIsMuted] = useState(() => {
+    return localStorage.getItem('levelup_sound_muted') === 'true';
+  });
+
+  // Web Audio API custom synthesizer chimes (Success / Level Progress)
+  const playAlertSound = (type = 'success') => {
+    if (isMuted) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      const now = ctx.currentTime;
+      
+      if (type === 'success') {
+        osc.frequency.setValueAtTime(587.33, now); // D5
+        osc.frequency.setValueAtTime(880, now + 0.08); // A5
+        gain.gain.setValueAtTime(0.04, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+        osc.start();
+        osc.stop(now + 0.25);
+      } else if (type === 'xp') {
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.06); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.12); // G5
+        gain.gain.setValueAtTime(0.03, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+        osc.start();
+        osc.stop(now + 0.28);
+      } else if (type === 'rank' || type === 'trophy') {
+        osc.frequency.setValueAtTime(440, now); // A4
+        osc.frequency.setValueAtTime(554.37, now + 0.08); // C#5
+        osc.frequency.setValueAtTime(659.25, now + 0.16); // E5
+        osc.frequency.setValueAtTime(880, now + 0.24); // A5
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+        osc.start();
+        osc.stop(now + 0.45);
+      }
+    } catch (e) {
+      // Audio context blocked
+    }
+  };
+
+  // Add floating toast triggers
+  const triggerToast = (title, body, type = 'success') => {
+    const id = Math.random().toString();
+    setToasts(prev => [...prev, { id, title, body, type }]);
+    playAlertSound(type);
+
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
+  // Generic backend fetch helper client
+  const apiFetch = async (path, options = {}) => {
+    if (!user || !user.email) return null;
+    const token = user.email.toLowerCase();
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...(options.headers || {})
+    };
+    
+    try {
+      const res = await fetch(`http://localhost:5000${path}`, {
+        ...options,
+        headers
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      // Backend down, falls back silently to local storage
+    }
+    return null;
+  };
+
+  // Custom User Sign-In Action (Supports Demo Mode or Isolated Email registration)
+  const loginUser = async (name, email, useDemoData = false, isSignUp = false) => {
     if (useDemoData) {
       const demoUser = {
         displayName: 'Penguin Cadet',
@@ -239,6 +328,10 @@ export const AppProvider = ({ children }) => {
         setCalendar([]);
         setCustomPages([]);
         setDashboardGoal(freshGoal);
+        setNotifications([
+          { id: 'n_welcome', title: 'Welcome Sync Complete', body: 'System profile generated successfully. Let\'s level up!', type: 'system', read: false, time: 'Just now' }
+        ]);
+
         setCurrentTab('dashboard');
         return { success: true };
       } else {
@@ -247,12 +340,64 @@ export const AppProvider = ({ children }) => {
           return { success: false, error: 'Account does not exist. Sign up first!' };
         }
 
-        const loadedUser = JSON.parse(localStorage.getItem(`levelup_user_${emailKey}`) || '{}');
-        const loadedHabitList = JSON.parse(localStorage.getItem(`levelup_habit_list_${emailKey}`) || '[]');
-        const loadedHabits = JSON.parse(localStorage.getItem(`levelup_habits_${emailKey}`) || '{}');
-        const loadedCalendar = JSON.parse(localStorage.getItem(`levelup_calendar_${emailKey}`) || '[]');
-        const loadedPages = JSON.parse(localStorage.getItem(`levelup_custom_pages_${emailKey}`) || '[]');
-        let loadedGoal = JSON.parse(localStorage.getItem(`levelup_dashboard_goal_${emailKey}`) || '{}');
+        // Retrieve isolated data streams from backend server first
+        let fetchedUser = null;
+        let fetchedHabitList = null;
+        let fetchedHabits = null;
+        let fetchedCalendar = null;
+        let fetchedPages = null;
+        let fetchedGoal = null;
+        let fetchedAlerts = null;
+
+        try {
+          const headers = { 'Authorization': `Bearer ${emailKey}` };
+          const pRes = await fetch('http://localhost:5000/api/profile', { headers });
+          if (pRes.ok) fetchedUser = await pRes.json();
+
+          const pgRes = await fetch('http://localhost:5000/api/custom-pages', { headers });
+          if (pgRes.ok) {
+            const data = await pgRes.json();
+            fetchedPages = data.customPages;
+          }
+
+          const hbRes = await fetch('http://localhost:5000/api/habits', { headers });
+          if (hbRes.ok) {
+            const data = await hbRes.json();
+            fetchedHabits = data.habits;
+          }
+
+          const hlRes = await fetch('http://localhost:5000/api/habits/list', { headers });
+          if (hlRes.ok) {
+            const data = await hlRes.json();
+            fetchedHabitList = data.habitList;
+          }
+
+          const cRes = await fetch('http://localhost:5000/api/calendar', { headers });
+          if (cRes.ok) {
+            const data = await cRes.json();
+            fetchedCalendar = data.calendar;
+          }
+
+          const gRes = await fetch('http://localhost:5000/api/goal', { headers });
+          if (gRes.ok) fetchedGoal = await gRes.json();
+
+          const aRes = await fetch('http://localhost:5000/api/alerts', { headers });
+          if (aRes.ok) {
+            const data = await aRes.json();
+            fetchedAlerts = data.alerts;
+          }
+        } catch (err) {
+          // Backend offline, fallback to local storage
+        }
+
+        const loadedUser = fetchedUser || JSON.parse(localStorage.getItem(`levelup_user_${emailKey}`) || '{}');
+        const loadedHabitList = fetchedHabitList || JSON.parse(localStorage.getItem(`levelup_habit_list_${emailKey}`) || '[]');
+        const loadedHabits = fetchedHabits || JSON.parse(localStorage.getItem(`levelup_habits_${emailKey}`) || '{}');
+        const loadedCalendar = fetchedCalendar || JSON.parse(localStorage.getItem(`levelup_calendar_${emailKey}`) || '[]');
+        const loadedPages = fetchedPages || JSON.parse(localStorage.getItem(`levelup_custom_pages_${emailKey}`) || '[]');
+        const loadedAlerts = fetchedAlerts || JSON.parse(localStorage.getItem(`levelup_notifications_${emailKey}`) || '[]');
+        
+        let loadedGoal = fetchedGoal || JSON.parse(localStorage.getItem(`levelup_dashboard_goal_${emailKey}`) || '{}');
         if (
           loadedGoal.title === 'My Main Target Goal' || 
           loadedGoal.title === 'My Target Goal' || 
@@ -268,6 +413,10 @@ export const AppProvider = ({ children }) => {
         setCalendar(loadedCalendar);
         setCustomPages(loadedPages);
         setDashboardGoal(loadedGoal);
+        setNotifications(loadedAlerts.length > 0 ? loadedAlerts : [
+          { id: 'n_welcome', title: 'Welcome Sync Complete', body: 'Workspace configuration loaded successfully. Let\'s level up!', type: 'system', read: false, time: 'Just now' }
+        ]);
+
         setCurrentTab('dashboard');
         return { success: true };
       }
@@ -292,100 +441,17 @@ export const AppProvider = ({ children }) => {
     setCurrentTab('login');
   };
 
-  // Notion-style custom workspace page CRUD methods
-  const createCustomPage = (title, icon, termDays) => {
-    const newPage = {
-      id: Math.random().toString(),
-      title: title || 'Untitled Page',
-      icon: icon || '📝',
-      termDays: termDays || 14,
-      startDate: new Date().toISOString().split('T')[0],
-      tasks: [],
-      completedLogs: {}
-    };
-    setCustomPages(prev => [...prev, newPage]);
-    setCurrentTab(`page_${newPage.id}`);
-    addXP(10, `Created custom workspace page: "${newPage.title}"`);
-    return newPage;
-  };
-
-  const updateCustomPage = (pageId, updatedData) => {
-    setCustomPages(prev => 
-      prev.map(p => {
-        if (p.id === pageId) {
-          return { ...p, ...updatedData };
-        }
-        return p;
-      })
-    );
-  };
-
-  const deleteCustomPage = (pageId) => {
-    setCustomPages(prev => prev.filter(p => p.id !== pageId));
-    if (currentTab === `page_${pageId}`) {
-      setCurrentTab('dashboard');
-    }
-  };
-
-  const togglePageTask = (pageId, dateString, taskId) => {
-    setCustomPages(prev => 
-      prev.map(p => {
-        if (p.id === pageId) {
-          const completedLogs = { ...p.completedLogs };
-          const dayLogs = completedLogs[dateString] ? [...completedLogs[dateString]] : [];
-          const wasCompleted = dayLogs.includes(taskId);
-          
-          const totalTasks = (p.tasks || []).length || 1;
-          
-          let nextDayLogs;
-          if (wasCompleted) {
-            nextDayLogs = dayLogs.filter(id => id !== taskId);
-            
-            // Old completion ratio before unchecking
-            const oldRatio = dayLogs.length / totalTasks;
-            let xpSub = 3;
-            if (oldRatio >= 0.75) xpSub = 10;
-            else if (oldRatio >= 0.50) xpSub = 5;
-            
-            addXP(-xpSub, `Removed task from page "${p.title}"`);
-          } else {
-            nextDayLogs = [...dayLogs, taskId];
-            
-            // New completion ratio after checking
-            const newRatio = nextDayLogs.length / totalTasks;
-            let xpAdd = 3;
-            if (newRatio >= 0.75) xpAdd = 10;
-            else if (newRatio >= 0.50) xpAdd = 5;
-            
-            addXP(xpAdd, `Completed task on page "${p.title}"`);
-          }
-
-          completedLogs[dateString] = nextDayLogs;
-          return { ...p, completedLogs };
-        }
-        return p;
-      })
-    );
-  };
-
-  // Sync to database if server available, fallback localstorage
-  const syncProfileWithServer = async (updatedUser) => {
-    try {
-      await fetch('http://localhost:5000/api/profile/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer mock-token' },
-        body: JSON.stringify(updatedUser)
-      });
-    } catch (e) {
-      // Server down, falls back silently to local storage
-    }
-  };
+  // --- AUTOMATED BACKEND SYNC TRIGGERS ---
 
   useEffect(() => {
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_user_${key}`, JSON.stringify(user));
       localStorage.setItem('levelup_user', JSON.stringify(user));
+      apiFetch('/api/profile/sync', {
+        method: 'POST',
+        body: JSON.stringify(user)
+      });
     }
   }, [user]);
 
@@ -394,43 +460,79 @@ export const AppProvider = ({ children }) => {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_habit_list_${key}`, JSON.stringify(habitList));
       localStorage.setItem('levelup_habit_list', JSON.stringify(habitList));
+      apiFetch('/api/habits/list', {
+        method: 'POST',
+        body: JSON.stringify({ habitList })
+      });
     }
     recalculateReadiness();
-  }, [habitList]);
+  }, [habitList, user]);
 
   useEffect(() => {
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_habits_${key}`, JSON.stringify(habits));
       localStorage.setItem('levelup_habits', JSON.stringify(habits));
+      apiFetch('/api/habits', {
+        method: 'POST',
+        body: JSON.stringify({ habits })
+      });
     }
     recalculateReadiness();
-  }, [habits]);
+  }, [habits, user]);
 
   useEffect(() => {
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_calendar_${key}`, JSON.stringify(calendar));
       localStorage.setItem('levelup_calendar', JSON.stringify(calendar));
+      apiFetch('/api/calendar', {
+        method: 'POST',
+        body: JSON.stringify({ calendar })
+      });
     }
-  }, [calendar]);
+  }, [calendar, user]);
 
   useEffect(() => {
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_dashboard_goal_${key}`, JSON.stringify(dashboardGoal));
       localStorage.setItem('levelup_dashboard_goal', JSON.stringify(dashboardGoal));
+      apiFetch('/api/goal', {
+        method: 'POST',
+        body: JSON.stringify(dashboardGoal)
+      });
     }
-  }, [dashboardGoal]);
+  }, [dashboardGoal, user]);
 
   useEffect(() => {
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_custom_pages_${key}`, JSON.stringify(customPages));
       localStorage.setItem('levelup_custom_pages', JSON.stringify(customPages));
+      apiFetch('/api/custom-pages', {
+        method: 'POST',
+        body: JSON.stringify({ customPages })
+      });
     }
     recalculateReadiness();
-  }, [customPages]);
+  }, [customPages, user]);
+
+  useEffect(() => {
+    if (user && user.email) {
+      const key = user.email.toLowerCase();
+      localStorage.setItem(`levelup_notifications_${key}`, JSON.stringify(notifications));
+      localStorage.setItem('levelup_notifications', JSON.stringify(notifications));
+      apiFetch('/api/alerts', {
+        method: 'POST',
+        body: JSON.stringify({ alerts: notifications })
+      });
+    }
+  }, [notifications, user]);
+
+  useEffect(() => {
+    localStorage.setItem('levelup_sound_muted', isMuted ? 'true' : 'false');
+  }, [isMuted]);
 
   useEffect(() => {
     localStorage.setItem('levelup_theme_mode', themeMode);
@@ -502,7 +604,7 @@ export const AppProvider = ({ children }) => {
           xpGained: amount,
           action: actionName
         });
-        playPromotionSound();
+        triggerToast('Rank Ascent!', `Promoted to ${newRank}!`, 'rank');
       }
 
       // Add a small notification
@@ -515,6 +617,7 @@ export const AppProvider = ({ children }) => {
         time: 'Just now'
       };
       setNotifications(old => [newNotif, ...old]);
+      triggerToast(amount > 0 ? 'XP Progress Gained' : 'XP Adjusted', `Unlocked via: ${actionName}`, 'xp');
 
       const updated = {
         ...prev,
@@ -523,7 +626,6 @@ export const AppProvider = ({ children }) => {
         level: newLevel
       };
       
-      syncProfileWithServer(updated);
       return updated;
     });
   };
@@ -534,11 +636,80 @@ export const AppProvider = ({ children }) => {
       prev.map(m => {
         if (m.id === missionId && !m.completed) {
           addXP(m.xp, m.task);
+          triggerToast('Mission Complete!', m.task, 'success');
           return { ...m, completed: true };
         }
         return m;
       })
     );
+  };
+
+  // Custom Notion Page task checking helper
+  const togglePageTask = (pageId, dateString, taskId) => {
+    setCustomPages(prev => 
+      prev.map(p => {
+        if (p.id === pageId) {
+          const completedLogs = { ...p.completedLogs };
+          const dayLogs = completedLogs[dateString] ? [...completedLogs[dateString]] : [];
+          const wasCompleted = dayLogs.includes(taskId);
+          
+          const totalTasks = (p.tasks || []).length || 1;
+          
+          let nextDayLogs;
+          if (wasCompleted) {
+            nextDayLogs = dayLogs.filter(id => id !== taskId);
+            
+            // Old completion ratio before unchecking
+            const oldRatio = dayLogs.length / totalTasks;
+            let xpSub = 3;
+            if (oldRatio >= 0.75) xpSub = 10;
+            else if (oldRatio >= 0.50) xpSub = 5;
+            
+            addXP(-xpSub, `Removed task from page "${p.title}"`);
+          } else {
+            nextDayLogs = [...dayLogs, taskId];
+            
+            // New completion ratio after checking
+            const newRatio = nextDayLogs.length / totalTasks;
+            let xpAdd = 3;
+            if (newRatio >= 0.75) xpAdd = 10;
+            else if (newRatio >= 0.50) xpAdd = 5;
+            
+            addXP(xpAdd, `Completed task on page "${p.title}"`);
+          }
+
+          completedLogs[dateString] = nextDayLogs;
+          return { ...p, completedLogs };
+        }
+        return p;
+      })
+    );
+  };
+
+  // Custom Page creation helpers
+  const createCustomPage = (title, icon, termDays, tasks) => {
+    const newPage = {
+      id: `cp_${Math.random().toString(36).substr(2, 9)}`,
+      title,
+      icon: icon || '📄',
+      termDays: parseInt(termDays) || 7,
+      startDate: new Date().toISOString().split('T')[0],
+      tasks: tasks.map((t, idx) => ({ id: `t_${idx}_${Math.random().toString(36).substr(2, 5)}`, text: t })),
+      completedLogs: {}
+    };
+    
+    setCustomPages(prev => [...prev, newPage]);
+    addXP(10, `Created custom workspace page: "${newPage.title}"`);
+    triggerToast('Workspace Created', `Page "${title}" is ready!`, 'success');
+    return newPage;
+  };
+
+  const updateCustomPage = (updatedPage) => {
+    setCustomPages(prev => prev.map(p => p.id === updatedPage.id ? updatedPage : p));
+  };
+
+  const deleteCustomPage = (id) => {
+    setCustomPages(prev => prev.filter(p => p.id !== id));
   };
 
   // Habit Check actions
@@ -568,16 +739,18 @@ export const AppProvider = ({ children }) => {
     if (!name || habitList.includes(name)) return;
     setHabitList(prev => [...prev, name]);
     addXP(10, `Tracked custom habit: "${name}"`);
+    triggerToast('Habit Tracked', `New habit added: "${name}"`, 'success');
   };
 
   const deleteHabit = (name) => {
     setHabitList(prev => prev.filter(h => h !== name));
   };
 
-  // Dashboard Target Countdown Goal Customizer Helper
+  // Dashboard Target Goal Customizer Helper
   const updateDashboardGoal = (title, targetDate) => {
     setDashboardGoal({ title, targetDate });
     addXP(15, `Updated main target goal: "${title}"`);
+    triggerToast('Target Goal Updated', title, 'success');
   };
 
   // Calendar Planner
@@ -588,6 +761,7 @@ export const AppProvider = ({ children }) => {
     };
     setCalendar(prev => [newEv, ...prev]);
     addXP(10, `Scheduled Event: ${event.title}`);
+    triggerToast('Event Scheduled', event.title, 'success');
   };
 
   const deleteCalendarEvent = (id) => {
@@ -596,6 +770,10 @@ export const AppProvider = ({ children }) => {
 
   const markAllNotificationsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const purgeAllNotifications = () => {
+    setNotifications([]);
   };
 
   return (
@@ -608,10 +786,12 @@ export const AppProvider = ({ children }) => {
       dashboardGoal, updateDashboardGoal,
       calendar, addCalendarEvent, deleteCalendarEvent,
       dailyMissions, completeMission,
-      notifications, markAllNotificationsRead,
+      notifications, setNotifications, markAllNotificationsRead, purgeAllNotifications,
       addXP, loginUser, logoutUser,
       customPages, createCustomPage, updateCustomPage, deleteCustomPage, togglePageTask,
-      themeMode, setThemeMode
+      themeMode, setThemeMode,
+      toasts, triggerToast,
+      isMuted, setIsMuted
     }}>
       {children}
     </AppContext.Provider>

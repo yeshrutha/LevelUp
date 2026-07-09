@@ -36,7 +36,8 @@ export const Sidebar = () => {
     { id: 'habits', label: 'Habit Tracker', icon: CheckSquare },
     { id: 'calendar', label: 'Calendar Planner', icon: CalendarIcon },
     { id: 'analytics', label: 'Analytics Suite', icon: TrendingUp },
-    { id: 'achievements', label: 'Achievements', icon: Award }
+    { id: 'achievements', label: 'Achievements', icon: Award },
+    { id: 'alerts', label: 'Alerts Hub', icon: Bell }
   ];
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -116,8 +117,22 @@ export const Sidebar = () => {
               } ${collapsed ? 'justify-center' : ''}`}
               title={collapsed ? item.label : ''}
             >
-              <Icon size={18} className={isActive ? 'text-accent' : ''} />
-              {!collapsed && <span>{item.label}</span>}
+              <div className="relative flex items-center justify-center shrink-0">
+                <Icon size={18} className={isActive ? 'text-accent' : ''} />
+                {item.id === 'alerts' && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse border border-slate-950" />
+                )}
+              </div>
+              {!collapsed && (
+                <div className="flex-1 flex items-center justify-between min-w-0">
+                  <span className="truncate">{item.label}</span>
+                  {item.id === 'alerts' && unreadCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[8px] font-bold tracking-normal leading-none shrink-0 ml-2">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
+              )}
             </button>
           );
         })}
