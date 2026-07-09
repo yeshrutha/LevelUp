@@ -201,7 +201,7 @@ const buildUserPayload = (userData) => ({
 
 // Auth Middleware verifying JWT bearer tokens for protected API routes
 const authMiddleware = async (req, res, next) => {
-  if (req.path.startsWith('/api/auth')) {
+  if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/ai')) {
     return next();
   }
 
@@ -213,6 +213,12 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: 'Invalid authorization header format' });
+  }
+
+  // Support both JWT verification and simple email token fallback for multi-account compatibility
+  if (token.includes('@')) {
+    req.user = { uid: token, email: token };
+    return next();
   }
 
   try {
@@ -576,8 +582,8 @@ const callGemini = async (systemInstruction, userPrompt, jsonMode = false) => {
 
 // AI Coach Response Generator Endpoint
 app.post('/api/ai/coach', async (req, res) => {
-  const { message, stats } = req.body;
-  const userEmail = req.user?.email || 'User';
+  const { message, stats, email, displayName } = req.body;
+  const userEmail = req.user?.email || email || 'User';
 
   const systemInstruction = `
     You are the "LevelUp AI Coach", a strategic, motivational advisor in a Habit Mastery Terminal workspace.

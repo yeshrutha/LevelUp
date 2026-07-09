@@ -58,13 +58,17 @@ export const AICoach = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: msg,
+          email: user?.email,
+          displayName: user?.displayName,
           stats: {
-            leetcodeCount,
-            projectsCount,
-            readiness: user.readiness
+            readiness: user?.readiness || 0,
+            streak: user?.streak || 0
           }
         })
       });
+      if (!response.ok) {
+        throw new Error('Failed to fetch from coach API');
+      }
       const data = await response.json();
       
       setTimeout(() => {
