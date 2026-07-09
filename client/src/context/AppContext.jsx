@@ -73,16 +73,14 @@ export const playPromotionSound = () => {
 };
 
 export const AppProvider = ({ children }) => {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('levelup_user');
     return saved ? JSON.parse(saved) : null;
   });
 
   const [currentTab, setCurrentTab] = useState(() => {
-    const savedUser = localStorage.getItem('levelup_user');
-    return savedUser ? 'dashboard' : 'login';
+    const saved = localStorage.getItem('levelup_user');
+    return saved ? 'dashboard' : 'login';
   });
 
   const [customPages, setCustomPages] = useState(() => {
@@ -139,6 +137,14 @@ export const AppProvider = ({ children }) => {
     { id: 'dm2', task: 'Check off Notion Page tasks', xp: 30, completed: false },
     { id: 'dm3', task: 'Maintain Streak Checkpoints', xp: 20, completed: false }
   ]);
+
+  // Notifications / Alerts Log
+  const [notifications, setNotifications] = useState(() => {
+    const saved = localStorage.getItem('levelup_notifications');
+    return saved ? JSON.parse(saved) : [
+      { id: 'n1', title: 'System Initialized', body: 'Welcome to LevelUp. Enter your milestones to raise your readiness score.', type: 'system', read: false, time: 'Just now' }
+    ];
+  });
 
   // Floating Toasts Queue
   const [toasts, setToasts] = useState([]);
@@ -203,15 +209,17 @@ export const AppProvider = ({ children }) => {
 
   // Generic backend fetch helper client
   const apiFetch = async (path, options = {}) => {
-    if (!user || !user.token) return null;
+    if (!user || !user.email) return null;
+    const token = user.email.toLowerCase();
+    
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${user.token}`,
+      'Authorization': `Bearer ${token}`,
       ...(options.headers || {})
     };
-
+    
     try {
-      const res = await fetch(`${API_BASE_URL}${path}`, {
+      const res = await fetch(`http://localhost:5000${path}`, {
         ...options,
         headers
       });
@@ -223,10 +231,7 @@ export const AppProvider = ({ children }) => {
   };
 
   // Custom User Sign-In Action (Supports Demo Mode or Isolated Email registration)
-  const loginUser = async (name, email, password, useDemoData = false, isSignUp = false) => {
-    const emailKey = email.trim().toLowerCase();
-    const passwordValue = password || '';
-
+  const loginUser = async (name, email, useDemoData = false, isSignUp = false) => {
     if (useDemoData) {
       const demoUser = {
         displayName: 'Penguin Cadet',
@@ -236,8 +241,7 @@ export const AppProvider = ({ children }) => {
         level: 1,
         rank: 'Iron II',
         streak: 3,
-        readiness: 55,
-        token: 'demo-token'
+        readiness: 55
       };
 
       const demoHabitList = ['Exercise', 'Drink Water', 'Read Book', 'No Junk Food'];
@@ -276,90 +280,152 @@ export const AppProvider = ({ children }) => {
       setCalendar(demoCalendar);
       setCustomPages(demoPages);
       setDashboardGoal(demoGoal);
-      setCurrentTab('dashboard');
 
       localStorage.setItem('levelup_user', JSON.stringify(demoUser));
-      localStorage.setItem('levelup_token', demoUser.token);
       localStorage.setItem('levelup_habit_list', JSON.stringify(demoHabitList));
       localStorage.setItem('levelup_habits', JSON.stringify(demoHabits));
       localStorage.setItem('levelup_calendar', JSON.stringify(demoCalendar));
       localStorage.setItem('levelup_custom_pages', JSON.stringify(demoPages));
       localStorage.setItem('levelup_dashboard_goal', JSON.stringify(demoGoal));
       return { success: true };
-    }
+    } else {
+      const emailKey = email.trim().toLowerCase();
+      const registeredStr = localStorage.getItem('levelup_registered_emails');
+      const registered = registeredStr ? JSON.parse(registeredStr) : ['cadet@levelup.io'];
 
-    const registrationPayload = {
-      email: emailKey,
-      password: passwordValue,
-      displayName: name || 'Cadet'
-    };
+      if (isSignUp) {
+        if (registered.includes(emailKey)) {
+          return { success: false, error: 'Email already exists. Use Sign In instead!' };
+        }
 
-    if (!emailKey || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailKey)) {
-      return { success: false, error: 'Please enter a valid email address!' };
-    }
+        const nextRegistered = [...registered, emailKey];
+        localStorage.setItem('levelup_registered_emails', JSON.stringify(nextRegistered));
 
-    if (passwordValue.length < 8) {
-      return { success: false, error: 'Password must be at least 8 characters.' };
-    }
+        const freshUser = {
+          displayName: name || 'Cadet',
+          email: emailKey,
+          avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name || 'cadet')}`,
+          xp: 0,
+          level: 1,
+          rank: 'Iron I',
+          streak: 0,
+          readiness: 0
+        };
 
-    try {
-      const endpoint = isSignUp ? '/api/auth/register' : '/api/auth/login';
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(registrationPayload)
-      });
+        const freshHabitList = ['Exercise', 'Drink Water', 'Read Book'];
+        const freshGoal = { title: '', targetDate: '' };
 
-      const result = await response.json();
-      if (!response.ok) {
-        return { success: false, error: result.error || 'Authentication failed.' };
-      }
+        localStorage.setItem(`levelup_user_${emailKey}`, JSON.stringify(freshUser));
+        localStorage.setItem(`levelup_habit_list_${emailKey}`, JSON.stringify(freshHabitList));
+        localStorage.setItem(`levelup_habits_${emailKey}`, JSON.stringify({}));
+        localStorage.setItem(`levelup_calendar_${emailKey}`, JSON.stringify([]));
+        localStorage.setItem(`levelup_custom_pages_${emailKey}`, JSON.stringify([]));
+        localStorage.setItem(`levelup_dashboard_goal_${emailKey}`, JSON.stringify(freshGoal));
 
-      const authenticatedUser = {
-        ...result.profile,
-        email: emailKey,
-        token: result.token
-      };
+        setUser(freshUser);
+        setHabitList(freshHabitList);
+        setHabits({});
+        setCalendar([]);
+        setCustomPages([]);
+        setDashboardGoal(freshGoal);
+        setNotifications([
+          { id: 'n_welcome', title: 'Welcome Sync Complete', body: 'System profile generated successfully. Let\'s level up!', type: 'system', read: false, time: 'Just now' }
+        ]);
 
-      setUser(authenticatedUser);
-      setHabitList(result.habitList || []);
-      setHabits(result.habits || {});
-      setCalendar(result.calendar || []);
-      setCustomPages(result.customPages || []);
-      setDashboardGoal(result.goal || { title: '', targetDate: '' });
-      setCurrentTab('dashboard');
+        setCurrentTab('dashboard');
+        return { success: true };
+      } else {
+        // Sign In Mode
+        if (!registered.includes(emailKey)) {
+          return { success: false, error: 'Account does not exist. Sign up first!' };
+        }
 
-      localStorage.setItem('levelup_user', JSON.stringify(authenticatedUser));
-      localStorage.setItem('levelup_token', result.token);
-      localStorage.setItem('levelup_habit_list', JSON.stringify(result.habitList || []));
-      localStorage.setItem('levelup_habits', JSON.stringify(result.habits || {}));
-      localStorage.setItem('levelup_calendar', JSON.stringify(result.calendar || []));
-      localStorage.setItem('levelup_custom_pages', JSON.stringify(result.customPages || []));
-      localStorage.setItem('levelup_dashboard_goal', JSON.stringify(result.goal || { title: '', targetDate: '' }));
+        // Retrieve isolated data streams from backend server first
+        let fetchedUser = null;
+        let fetchedHabitList = null;
+        let fetchedHabits = null;
+        let fetchedCalendar = null;
+        let fetchedPages = null;
+        let fetchedGoal = null;
+        let fetchedAlerts = null;
 
-      return { success: true };
-    } catch (err) {
-      // Backend offline fallback using local storage.
-      const storedUser = JSON.parse(localStorage.getItem(`levelup_user_${emailKey}`) || 'null');
-      if (storedUser && !isSignUp) {
-        setUser({ ...storedUser, email: emailKey, token: 'offline-token' });
-        setHabitList(JSON.parse(localStorage.getItem(`levelup_habit_list_${emailKey}`) || '[]'));
-        setHabits(JSON.parse(localStorage.getItem(`levelup_habits_${emailKey}`) || '{}'));
-        setCalendar(JSON.parse(localStorage.getItem(`levelup_calendar_${emailKey}`) || '[]'));
-        setCustomPages(JSON.parse(localStorage.getItem(`levelup_custom_pages_${emailKey}`) || '[]'));
-        setDashboardGoal(JSON.parse(localStorage.getItem(`levelup_dashboard_goal_${emailKey}`) || '{"title":"","targetDate":""}'));
+        try {
+          const headers = { 'Authorization': `Bearer ${emailKey}` };
+          const pRes = await fetch('http://localhost:5000/api/profile', { headers });
+          if (pRes.ok) fetchedUser = await pRes.json();
+
+          const pgRes = await fetch('http://localhost:5000/api/custom-pages', { headers });
+          if (pgRes.ok) {
+            const data = await pgRes.json();
+            fetchedPages = data.customPages;
+          }
+
+          const hbRes = await fetch('http://localhost:5000/api/habits', { headers });
+          if (hbRes.ok) {
+            const data = await hbRes.json();
+            fetchedHabits = data.habits;
+          }
+
+          const hlRes = await fetch('http://localhost:5000/api/habits/list', { headers });
+          if (hlRes.ok) {
+            const data = await hlRes.json();
+            fetchedHabitList = data.habitList;
+          }
+
+          const cRes = await fetch('http://localhost:5000/api/calendar', { headers });
+          if (cRes.ok) {
+            const data = await cRes.json();
+            fetchedCalendar = data.calendar;
+          }
+
+          const gRes = await fetch('http://localhost:5000/api/goal', { headers });
+          if (gRes.ok) fetchedGoal = await gRes.json();
+
+          const aRes = await fetch('http://localhost:5000/api/alerts', { headers });
+          if (aRes.ok) {
+            const data = await aRes.json();
+            fetchedAlerts = data.alerts;
+          }
+        } catch (err) {
+          // Backend offline, fallback to local storage
+        }
+
+        const loadedUser = fetchedUser || JSON.parse(localStorage.getItem(`levelup_user_${emailKey}`) || '{}');
+        const loadedHabitList = fetchedHabitList || JSON.parse(localStorage.getItem(`levelup_habit_list_${emailKey}`) || '[]');
+        const loadedHabits = fetchedHabits || JSON.parse(localStorage.getItem(`levelup_habits_${emailKey}`) || '{}');
+        const loadedCalendar = fetchedCalendar || JSON.parse(localStorage.getItem(`levelup_calendar_${emailKey}`) || '[]');
+        const loadedPages = fetchedPages || JSON.parse(localStorage.getItem(`levelup_custom_pages_${emailKey}`) || '[]');
+        const loadedAlerts = fetchedAlerts || JSON.parse(localStorage.getItem(`levelup_notifications_${emailKey}`) || '[]');
+        
+        let loadedGoal = fetchedGoal || JSON.parse(localStorage.getItem(`levelup_dashboard_goal_${emailKey}`) || '{}');
+        if (
+          loadedGoal.title === 'My Main Target Goal' || 
+          loadedGoal.title === 'My Target Goal' || 
+          loadedGoal.title === 'Semester Countdown' ||
+          loadedGoal.targetDate === '2026-08-31'
+        ) {
+          loadedGoal = { title: '', targetDate: '' };
+        }
+
+        setUser(loadedUser);
+        setHabitList(loadedHabitList);
+        setHabits(loadedHabits);
+        setCalendar(loadedCalendar);
+        setCustomPages(loadedPages);
+        setDashboardGoal(loadedGoal);
+        setNotifications(loadedAlerts.length > 0 ? loadedAlerts : [
+          { id: 'n_welcome', title: 'Welcome Sync Complete', body: 'Workspace configuration loaded successfully. Let\'s level up!', type: 'system', read: false, time: 'Just now' }
+        ]);
+
         setCurrentTab('dashboard');
         return { success: true };
       }
-
-      return { success: false, error: 'Unable to connect to authentication service.' };
     }
   };
 
   // Custom User Sign-Out Action
   const logoutUser = () => {
     localStorage.removeItem('levelup_user');
-    localStorage.removeItem('levelup_token');
     localStorage.removeItem('levelup_habit_list');
     localStorage.removeItem('levelup_habits');
     localStorage.removeItem('levelup_calendar');
@@ -380,23 +446,11 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     if (user && user.email) {
       const key = user.email.toLowerCase();
-      const savedProfile = {
-        displayName: user.displayName,
-        avatar: user.avatar,
-        xp: user.xp,
-        level: user.level,
-        rank: user.rank,
-        streak: user.streak,
-        readiness: user.readiness
-      };
-
       localStorage.setItem(`levelup_user_${key}`, JSON.stringify(user));
       localStorage.setItem('levelup_user', JSON.stringify(user));
-      localStorage.setItem('levelup_token', user.token);
-
       apiFetch('/api/profile/sync', {
         method: 'POST',
-        body: JSON.stringify(savedProfile)
+        body: JSON.stringify(user)
       });
     }
   }, [user]);
@@ -463,6 +517,18 @@ export const AppProvider = ({ children }) => {
     }
     recalculateReadiness();
   }, [customPages, user]);
+
+  useEffect(() => {
+    if (user && user.email) {
+      const key = user.email.toLowerCase();
+      localStorage.setItem(`levelup_notifications_${key}`, JSON.stringify(notifications));
+      localStorage.setItem('levelup_notifications', JSON.stringify(notifications));
+      apiFetch('/api/alerts', {
+        method: 'POST',
+        body: JSON.stringify({ alerts: notifications })
+      });
+    }
+  }, [notifications, user]);
 
   useEffect(() => {
     localStorage.setItem('levelup_sound_muted', isMuted ? 'true' : 'false');
@@ -541,6 +607,16 @@ export const AppProvider = ({ children }) => {
         triggerToast('Rank Ascent!', `Promoted to ${newRank}!`, 'rank');
       }
 
+      // Add a small notification
+      const newNotif = {
+        id: Math.random().toString(),
+        title: amount > 0 ? 'XP Progress Gained' : 'XP Adjusted',
+        body: `Unlocked via: ${actionName}`,
+        type: 'xp',
+        read: false,
+        time: 'Just now'
+      };
+      setNotifications(old => [newNotif, ...old]);
       triggerToast(amount > 0 ? 'XP Progress Gained' : 'XP Adjusted', `Unlocked via: ${actionName}`, 'xp');
 
       const updated = {
@@ -611,7 +687,7 @@ export const AppProvider = ({ children }) => {
   };
 
   // Custom Page creation helpers
-  const createCustomPage = (title, icon, termDays, tasks = []) => {
+  const createCustomPage = (title, icon, termDays, tasks) => {
     const newPage = {
       id: `cp_${Math.random().toString(36).substr(2, 9)}`,
       title,
@@ -692,6 +768,14 @@ export const AppProvider = ({ children }) => {
     setCalendar(prev => prev.filter(item => item.id !== id));
   };
 
+  const markAllNotificationsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const purgeAllNotifications = () => {
+    setNotifications([]);
+  };
+
   return (
     <AppContext.Provider value={{
       user, setUser,
@@ -702,6 +786,7 @@ export const AppProvider = ({ children }) => {
       dashboardGoal, updateDashboardGoal,
       calendar, addCalendarEvent, deleteCalendarEvent,
       dailyMissions, completeMission,
+      notifications, setNotifications, markAllNotificationsRead, purgeAllNotifications,
       addXP, loginUser, logoutUser,
       customPages, createCustomPage, updateCustomPage, deleteCustomPage, togglePageTask,
       themeMode, setThemeMode,
