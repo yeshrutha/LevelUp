@@ -102,10 +102,9 @@ export const AppProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : {};
   });
 
-  // Habit List (default generic)
   const [habitList, setHabitList] = useState(() => {
     const saved = localStorage.getItem('levelup_habit_list');
-    return saved ? JSON.parse(saved) : ['Exercise', 'Drink Water', 'Read Book'];
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Calendar (default empty)
@@ -337,7 +336,7 @@ export const AppProvider = ({ children }) => {
           unlockedAchievements: []
         };
 
-        const freshHabitList = ['Exercise', 'Drink Water', 'Read Book'];
+        const freshHabitList = [];
         const freshGoal = { title: '', targetDate: '' };
 
         localStorage.setItem(`levelup_user_${emailKey}`, JSON.stringify(freshUser));
@@ -463,7 +462,7 @@ export const AppProvider = ({ children }) => {
     localStorage.removeItem('levelup_dashboard_goal');
 
     setUser(null);
-    setHabitList(['Exercise', 'Drink Water', 'Read Book']);
+    setHabitList([]);
     setHabits({});
     setCalendar([]);
     setCustomPages([]);
