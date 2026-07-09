@@ -545,7 +545,7 @@ const callGemini = async (systemInstruction, userPrompt, jsonMode = false) => {
     throw new Error('GEMINI_API_KEY is not configured in your .env file.');
   }
 
-  const model = "gemini-2.5-flash";
+  const model = "gemini-3.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
