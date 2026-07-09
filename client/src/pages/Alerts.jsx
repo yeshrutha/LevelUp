@@ -90,7 +90,7 @@ export const Alerts = () => {
         className="flex items-center gap-2 text-[10px] font-bold font-futuristic text-slate-400 hover:text-white uppercase tracking-widest transition-colors cursor-pointer group mb-2"
       >
         <ArrowLeft size={12} className="group-hover:-translate-x-1 transition-transform" />
-        <span>← Back to Dashboard</span>
+        <span>Back to Dashboard</span>
       </button>
 
       {/* Header bar */}
@@ -98,10 +98,10 @@ export const Alerts = () => {
         <div>
           <h1 className="text-2xl font-black font-futuristic tracking-wider uppercase flex items-center gap-2.5">
             <Bell className="text-accent animate-pulse" size={20} />
-            Alerts Hub
+            Notifications
           </h1>
           <p className="text-[9px] uppercase tracking-widest text-slate-400 mt-1">
-            System logs, chimes configurations, and XP telemetry tracking
+            System notifications, audio settings, and activity tracking logs
           </p>
         </div>
 
@@ -144,7 +144,7 @@ export const Alerts = () => {
         <div className="glass-panel p-4 rounded-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full blur-2xl" />
           <span className="text-[9px] uppercase font-futuristic text-slate-400 tracking-widest block mb-1">
-            Total Telemetry Logs
+            Total Notifications
           </span>
           <span className="text-2xl font-black text-white">{notifications.length}</span>
         </div>
