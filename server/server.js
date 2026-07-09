@@ -197,9 +197,8 @@ const buildUserPayload = (userData) => ({
   goal: userData.goal
 });
 
-// Auth Middleware verifying JWT bearer tokens for protected API routes
 const authMiddleware = async (req, res, next) => {
-  if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/ai')) {
+  if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/ai') || req.path.startsWith('/api/system')) {
     return next();
   }
 
@@ -761,6 +760,25 @@ app.post('/api/ai/planner', async (req, res) => {
       { title: "Planner Synchronized", body: "Your career goals schedule has been integrated successfully.", type: "system" }
     ]
   });
+});
+
+// Database System Purge Reset Endpoint
+app.post('/api/system/reset-db', async (req, res) => {
+  try {
+    if (isConnectedToMongo) {
+      await UserData.deleteMany({});
+      localDB = {};
+      console.log('🧹 MongoDB database collection userdatas has been purged.');
+      return res.json({ success: true, message: 'Database reset successfully!' });
+    } else {
+      localDB = {};
+      console.log('🧹 In-memory database has been reset.');
+      return res.json({ success: true, message: 'In-memory database reset successfully!' });
+    }
+  } catch (err) {
+    console.error('❌ Reset database error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, () => {

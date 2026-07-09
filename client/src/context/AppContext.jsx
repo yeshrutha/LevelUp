@@ -496,6 +496,30 @@ export const AppProvider = ({ children }) => {
     setCurrentTab('login');
   };
 
+  // Danger Zone System Wipe Action (Local and Database records)
+  const resetSystem = async () => {
+    localStorage.clear();
+
+    try {
+      await fetch('http://localhost:5000/api/system/reset-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (e) {
+      console.warn('Backend server offline during reset:', e.message);
+    }
+
+    setUser(null);
+    setHabitList([]);
+    setHabits({});
+    setCalendar([]);
+    setCustomPages([]);
+    setDashboardGoal({ title: '', targetDate: '' });
+    setNotifications([]);
+    setCurrentTab('login');
+    triggerToast('System Reset Complete', 'All local storage and server database records purged.', 'success');
+  };
+
   // --- AUTOMATED BACKEND SYNC TRIGGERS ---
 
   useEffect(() => {
@@ -916,7 +940,7 @@ export const AppProvider = ({ children }) => {
       calendar, addCalendarEvent, deleteCalendarEvent,
       dailyMissions, completeMission,
       notifications, setNotifications, markAllNotificationsRead, purgeAllNotifications,
-      addXP, loginUser, logoutUser,
+      addXP, loginUser, logoutUser, resetSystem,
       customPages, createCustomPage, updateCustomPage, deleteCustomPage, togglePageTask,
       themeMode, setThemeMode: changeThemeMode,
       toasts, triggerToast,

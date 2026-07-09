@@ -4,7 +4,7 @@ import { Settings as SettingsIcon, Sun, Moon, User, Mail, AlertOctagon, ShieldAl
 import { motion } from 'framer-motion';
 
 export const Settings = () => {
-  const { user, setUser, themeMode, setThemeMode, logoutUser, setCurrentTab } = useApp();
+  const { user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, setCurrentTab } = useApp();
 
   const [editName, setEditName] = useState(user?.displayName || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
@@ -205,8 +205,8 @@ export const Settings = () => {
 
         <button
           onClick={() => {
-            if (window.confirm("Are you absolutely sure you want to delete all core profile data?")) {
-              logoutUser();
+            if (window.confirm("Are you absolutely sure you want to delete all core profile data? This will clear the MongoDB collections and all local accounts.")) {
+              resetSystem();
             }
           }}
           className="px-4 py-2 border border-rose-500/20 hover:border-rose-500/50 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-futuristic font-bold text-[10px] uppercase rounded transition-colors cursor-pointer"
