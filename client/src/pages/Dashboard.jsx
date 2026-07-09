@@ -1,0 +1,448 @@
+import React, { useEffect, useState } from 'react';
+import { useApp } from '../context/AppContext';
+import { RankBadgeSVG } from '../components/RankPromotion';
+import { 
+  Flame, 
+  Target, 
+  Zap, 
+  ChevronRight, 
+  Quote, 
+  Calendar, 
+  ListTodo, 
+  CheckSquare,
+  Sparkles,
+  Edit3,
+  CalendarDays,
+  Bot
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+export const Dashboard = () => {
+  const { 
+    user, 
+    setCurrentTab, 
+    dailyMissions, 
+    completeMission, 
+    calendar,
+    dashboardGoal,
+    updateDashboardGoal,
+    customPages
+  } = useApp();
+
+  const [greeting, setGreeting] = useState('Good Morning');
+  const [showGoalEditor, setShowGoalEditor] = useState(false);
+  const [editTitle, setEditTitle] = useState(dashboardGoal.title || '');
+  const [editDate, setEditDate] = useState(dashboardGoal.targetDate || '');
+
+  // Dynamic greeting
+  useEffect(() => {
+    const hours = new Date().getHours();
+    if (hours >= 18) setGreeting('Good Evening');
+    else if (hours >= 12) setGreeting('Good Afternoon');
+    else setGreeting('Good Morning');
+  }, []);
+
+  const quotes = [
+    { text: "Discipline is choosing between what you want now and what you want most.", author: "Abraham Lincoln" },
+    { text: "We suffer more often in imagination than in reality.", author: "Seneca" },
+    { text: "The happiness of your life depends upon the quality of your thoughts.", author: "Marcus Aurelius" },
+    { text: "It is not that I'm so smart. But I stay with the questions much longer.", author: "Albert Einstein" }
+  ];
+
+  const [dailyQuote] = useState(() => quotes[Math.floor(Math.random() * quotes.length)]);
+
+  // Calculate countdown days remaining
+  const calculateDaysRemaining = (targetDateStr) => {
+    if (!targetDateStr) return 0;
+    const target = new Date(targetDateStr);
+    const today = new Date();
+    // Normalize both to start of day
+    target.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    const diffTime = target - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const daysRemaining = calculateDaysRemaining(dashboardGoal.targetDate);
+
+  // Calculate mission completions
+  const completedMissions = dailyMissions.filter(m => m.completed).length;
+  const progressPercent = dailyMissions.length > 0 
+    ? Math.round((completedMissions / dailyMissions.length) * 100)
+    : 0;
+
+  const handleGoalSave = (e) => {
+    e.preventDefault();
+    updateDashboardGoal(editTitle, editDate);
+    setShowGoalEditor(false);
+  };
+
+  return (
+    <div className="space-y-6 select-none pb-12">
+      
+      {/* Top Greeting Banner */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-white font-futuristic flex items-center gap-2 tracking-wide">
+            {greeting}, {user?.displayName || 'Penguin'} <span className="animate-pulse">👋</span>
+          </h1>
+          <p className="text-xs text-slate-400 font-display uppercase tracking-widest mt-1">
+            Focus & Growth Completion Index: <span className="text-accent font-bold">{user.readiness}% Overall</span>
+          </p>
+        </div>
+
+        {/* Dynamic target countdown bar */}
+        <div className="w-full md:w-72 glass-panel p-3.5 rounded-lg border-white/5 bg-slate-900/30 flex flex-col gap-1.5 relative group">
+          <div className="flex justify-between items-center text-[10px] uppercase font-futuristic text-slate-400">
+            <span className="truncate pr-4 flex items-center gap-1">
+              <Target size={11} className="text-accent" />
+              {dashboardGoal.title || "No Target Goal Set"}
+            </span>
+            <span className="text-accent font-bold shrink-0">
+              {dashboardGoal.targetDate ? `${daysRemaining} Days Left` : "Set Goal"}
+            </span>
+          </div>
+          
+          <div className="h-1.5 bg-slate-950 rounded overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: dashboardGoal.targetDate ? `${Math.min(100, Math.max(0, 100 - (daysRemaining / 30) * 100))}%` : 0 }}
+              transition={{ duration: 1 }}
+              className="h-full bg-gradient-to-r from-primary to-accent" 
+            />
+          </div>
+
+          {/* Quick Edit Goal Button */}
+          <button 
+            onClick={() => {
+              setEditTitle(dashboardGoal.title);
+              setEditDate(dashboardGoal.targetDate);
+              setShowGoalEditor(true);
+            }}
+            className="absolute -top-2.5 -right-2.5 p-1 rounded-full bg-slate-900 border border-white/10 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-lg"
+            title="Edit Countdown Target"
+          >
+            <Edit3 size={9} />
+          </button>
+        </div>
+      </div>
+
+      {/* Goal countdown editor overlay modal */}
+      <AnimatePresence>
+        {showGoalEditor && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 px-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="max-w-sm w-full glass-panel p-6 rounded-xl border-white/15 shadow-2xl space-y-4"
+            >
+              <h3 className="text-sm font-futuristic font-bold text-white uppercase tracking-wider">
+                Configure Target Countdown
+              </h3>
+              
+              <form onSubmit={handleGoalSave} className="space-y-3.5">
+                <div className="space-y-1">
+                  <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-semibold tracking-wider">
+                    Goal Milestone
+                  </label>
+                  <input 
+                    type="text"
+                    required
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full bg-slate-950 border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+                    placeholder="e.g. Launch Side Project"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-semibold tracking-wider">
+                    Target Date
+                  </label>
+                  <input 
+                    type="date"
+                    required
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="w-full bg-slate-950 border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button 
+                    type="button"
+                    onClick={() => setShowGoalEditor(false)}
+                    className="px-3 py-1.5 bg-slate-900 border border-white/5 text-slate-400 hover:text-white rounded text-[10px] font-futuristic uppercase cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="px-4 py-1.5 bg-gradient-to-r from-primary to-accent hover:from-primary-light hover:to-accent-light text-slate-950 rounded text-[10px] font-futuristic font-bold uppercase shadow cursor-pointer"
+                  >
+                    Save Target
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left 2 Cols */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Valorant Career Cards Overview */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            
+            {/* Rank Box */}
+            <div className="glass-panel p-4 rounded-xl flex flex-col items-center justify-center text-center relative overflow-hidden group hover:border-accent/30 transition-all duration-300">
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-accent opacity-30 group-hover:opacity-100 transition-opacity" />
+              <RankBadgeSVG rankName={user.rank} size={60} />
+              <span className="text-[10px] text-slate-500 font-futuristic uppercase tracking-widest mt-2">Current Rank</span>
+              <span className="text-sm font-bold text-slate-100 font-display mt-0.5">{user.rank}</span>
+            </div>
+
+            {/* Level Box */}
+            <div className="glass-panel p-4 rounded-xl flex flex-col items-center justify-center text-center relative overflow-hidden group hover:border-cyan-400/30 transition-all duration-300">
+              <div className="absolute top-0 inset-x-0 h-1 bg-cyan-400 opacity-30 group-hover:opacity-100 transition-opacity" />
+              <div className="w-10 h-10 rounded bg-cyan-500/10 border border-cyan-400/20 text-cyan-400 flex items-center justify-center font-futuristic font-black text-lg">
+                {user.level}
+              </div>
+              <span className="text-[10px] text-slate-500 font-futuristic uppercase tracking-widest mt-3">Player Level</span>
+              <span className="text-sm font-bold text-slate-100 font-display mt-0.5">Level {user.level}</span>
+            </div>
+
+            {/* XP Box */}
+            <div className="glass-panel p-4 rounded-xl flex flex-col items-center justify-center text-center relative overflow-hidden group hover:border-emerald-400/30 transition-all duration-300">
+              <div className="absolute top-0 inset-x-0 h-1 bg-emerald-500 opacity-30 group-hover:opacity-100 transition-opacity" />
+              <div className="w-10 h-10 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <Zap size={22} className="animate-pulse" />
+              </div>
+              <span className="text-[10px] text-slate-500 font-futuristic uppercase tracking-widest mt-3">Total XP</span>
+              <span className="text-sm font-bold text-slate-100 font-display mt-0.5">{user.xp} XP</span>
+            </div>
+
+            {/* Streak Box */}
+            <div className="glass-panel p-4 rounded-xl flex flex-col items-center justify-center text-center relative overflow-hidden group hover:border-orange-500/30 transition-all duration-300">
+              <div className="absolute top-0 inset-x-0 h-1 bg-orange-500 opacity-30 group-hover:opacity-100 transition-opacity" />
+              <div className="w-10 h-10 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center justify-center">
+                <Flame size={22} className="animate-bounce" />
+              </div>
+              <span className="text-[10px] text-slate-500 font-futuristic uppercase tracking-widest mt-3">Streak Logs</span>
+              <span className="text-sm font-bold text-slate-100 font-display mt-0.5">{user.streak} Days</span>
+            </div>
+            
+          </div>
+
+          {/* Daily Missions */}
+          <div className="glass-panel p-5 rounded-xl border-white/10 relative">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="font-futuristic font-bold text-sm text-white flex items-center gap-1.5 uppercase tracking-wider">
+                  Today's Active Missions <Sparkles size={14} className="text-accent" />
+                </h3>
+                <p className="text-[10px] text-slate-400 font-display uppercase tracking-widest mt-0.5">COMPLETE FOR FAST XP LOOT</p>
+              </div>
+              <span className="text-xs font-bold text-accent font-futuristic bg-accent/10 border border-accent/20 px-2.5 py-1 rounded">
+                {progressPercent}% Complete
+              </span>
+            </div>
+
+            <div className="space-y-2.5">
+              {dailyMissions.map((mission) => (
+                <div 
+                  key={mission.id} 
+                  className={`flex items-center justify-between p-3.5 rounded-lg border transition-all duration-200 ${
+                    mission.completed 
+                      ? 'bg-slate-950/20 border-emerald-500/20 opacity-60' 
+                      : 'bg-slate-950/50 border-white/5 hover:border-white/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => !mission.completed && completeMission(mission.id)}
+                      className={`w-5 h-5 rounded border flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                        mission.completed 
+                          ? 'bg-emerald-500 border-emerald-500 text-slate-950' 
+                          : 'border-white/20 hover:border-accent bg-transparent'
+                      }`}
+                      disabled={mission.completed}
+                    >
+                      {mission.completed && '✓'}
+                    </button>
+                    <span className={`text-xs font-medium ${mission.completed ? 'line-through text-slate-500' : 'text-slate-200'}`}>
+                      {mission.task}
+                    </span>
+                  </div>
+                  
+                  <span className="text-[9px] font-bold font-futuristic text-accent bg-cyan-500/10 border border-cyan-400/20 px-2 py-0.5 rounded uppercase tracking-wider">
+                    XP Boost
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Navigation cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <div 
+              onClick={() => setCurrentTab('habits')}
+              className="glass-panel p-4 rounded-xl flex items-center justify-between hover:border-accent/30 transition-all duration-200 group cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded bg-cyan-500/10 border border-cyan-400/20 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-slate-950 transition-colors">
+                  <CheckSquare size={16} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white">Habit Tracker</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Check Daily Targets</p>
+                </div>
+              </div>
+              <ChevronRight size={14} className="text-slate-500 group-hover:text-white transition-colors" />
+            </div>
+
+            <div 
+              onClick={() => {
+                if (customPages.length > 0) setCurrentTab(`page_${customPages[0].id}`);
+              }}
+              className="glass-panel p-4 rounded-xl flex items-center justify-between hover:border-primary/30 transition-all duration-200 group cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded bg-indigo-500/10 border border-primary/20 text-primary group-hover:bg-primary group-hover:text-slate-950 transition-colors">
+                  <ListTodo size={16} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white">Notion Pages</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{customPages.length} Workspaces</p>
+                </div>
+              </div>
+              <ChevronRight size={14} className="text-slate-500 group-hover:text-white transition-colors" />
+            </div>
+
+            <div 
+              onClick={() => setCurrentTab('calendar')}
+              className="glass-panel p-4 rounded-xl flex items-center justify-between hover:border-orange-500/30 transition-all duration-200 group cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400 group-hover:bg-orange-500 group-hover:text-slate-950 transition-colors">
+                  <Calendar size={16} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white">Calendar Planner</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{calendar.length} Scheduled Events</p>
+                </div>
+              </div>
+              <ChevronRight size={14} className="text-slate-500 group-hover:text-white transition-colors" />
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* Right Sidebar - Stats Rings & Quotes */}
+        <div className="space-y-6">
+          
+          {/* Big Focus progress Circular Ring */}
+          <div className="glass-panel p-6 rounded-xl flex flex-col items-center justify-center text-center border-white/10 relative overflow-hidden">
+            <h3 className="font-futuristic font-bold text-sm text-white uppercase tracking-wider mb-4 self-start">
+              Growth Focus Progress
+            </h3>
+            
+            {/* SVG Circle meter */}
+            <div className="relative w-40 h-40 flex items-center justify-center mb-4">
+              <svg className="w-full h-full" viewBox="0 0 100 100">
+                <circle 
+                  cx="50" 
+                  cy="50" 
+                  r="40" 
+                  stroke="rgba(255,255,255,0.05)" 
+                  strokeWidth="8" 
+                  fill="transparent" 
+                />
+                <motion.circle 
+                  cx="50" 
+                  cy="50" 
+                  r="40" 
+                  stroke="url(#readinessGrad)" 
+                  strokeWidth="8" 
+                  strokeDasharray="251.2"
+                  initial={{ strokeDashoffset: 251.2 }}
+                  animate={{ strokeDashoffset: 251.2 - (251.2 * user.readiness) / 100 }}
+                  transition={{ duration: 1.2, ease: 'easeOut' }}
+                  strokeLinecap="round"
+                  fill="transparent" 
+                  className="progress-ring-circle"
+                />
+                <defs>
+                  <linearGradient id="readinessGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#6366F1" />
+                    <stop offset="100%" stopColor="#00E5FF" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute flex flex-col items-center">
+                <span className="text-4xl font-futuristic font-extrabold text-white text-neon-cyan">{user.readiness}%</span>
+                <span className="text-[9px] uppercase tracking-widest text-slate-500 font-display font-semibold mt-1">Growth</span>
+              </div>
+            </div>
+
+            <div className="w-full grid grid-cols-2 gap-3 text-left pt-2 border-t border-white/5">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 font-display">Active Pages</span>
+                <span className="text-xs font-bold text-slate-200">{customPages.length} Workspaces</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 font-display">Events scheduled</span>
+                <span className="text-xs font-bold text-slate-200">
+                  {calendar.length} Upcoming
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Quote card */}
+          <div className="glass-panel p-5 rounded-xl border-white/10 relative overflow-hidden flex flex-col justify-between h-40">
+            <Quote size={18} className="text-accent/20 absolute top-4 right-4" />
+            <p className="text-xs leading-relaxed text-slate-300 italic z-10 select-text">
+              "{dailyQuote.text}"
+            </p>
+            <div className="flex items-center gap-2 z-10 border-t border-white/5 pt-2 mt-2">
+              <div className="w-1.5 h-1.5 bg-accent rounded-full" />
+              <span className="text-[10px] font-semibold font-display text-slate-400 uppercase tracking-widest">
+                {dailyQuote.author}
+              </span>
+            </div>
+          </div>
+
+          {/* Mini AI Focus Panel */}
+          <div className="glass-panel p-5 rounded-xl border-white/10 bg-gradient-to-b from-primary/5 to-transparent relative">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="p-1.5 bg-primary/20 border border-primary/20 rounded text-accent flex items-center justify-center">
+                <Bot size={14} className="text-cyan-400" />
+              </div>
+              <span className="text-[10px] uppercase font-futuristic font-bold text-white tracking-widest">AI Growth Focus</span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Maintain your streak milestones by completing:
+            </p>
+            <ul className="text-[11px] text-slate-400 mt-2 space-y-1.5 list-disc pl-4">
+              <li>Custom timeline checklists inside active Pages</li>
+              <li>Check off habit goals in Habit Tracker</li>
+              <li>Schedule target items in Calendar</li>
+            </ul>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+};
