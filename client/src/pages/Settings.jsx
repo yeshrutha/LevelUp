@@ -6,31 +6,17 @@ import { motion } from 'framer-motion';
 export const Settings = () => {
   const { user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, setCurrentTab } = useApp();
 
-  const [editName, setEditName] = useState(user?.displayName || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
-  const [avatarSeed, setAvatarSeed] = useState(() => {
-    // extract seed if dicebear url
-    if (user?.avatar?.includes('dicebear')) {
-      const match = user.avatar.match(/seed=([^&]+)/);
-      return match ? decodeURIComponent(match[1]) : 'cadet';
-    }
-    return 'cadet';
-  });
-  
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleProfileSubmit = (e) => {
     e.preventDefault();
-    if (!editName.trim() || !editEmail.trim()) return;
-
-    const newAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(avatarSeed || 'cadet')}`;
+    if (!editEmail.trim()) return;
 
     setUser(prev => {
       const nextUser = {
         ...prev,
-        displayName: editName.trim(),
-        email: editEmail.trim(),
-        avatar: newAvatar
+        email: editEmail.trim()
       };
       localStorage.setItem('levelup_user', JSON.stringify(nextUser));
       return nextUser;
@@ -130,22 +116,6 @@ export const Settings = () => {
           
           <div className="space-y-1">
             <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-semibold tracking-wider">
-              Display Name
-            </label>
-            <div className="relative">
-              <User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input 
-                type="text"
-                required
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="w-full bg-slate-950 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-semibold tracking-wider">
               Email Address
             </label>
             <div className="relative">
@@ -158,22 +128,6 @@ export const Settings = () => {
                 className="w-full bg-slate-950 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
               />
             </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-semibold tracking-wider">
-              Robot Avatar Avatar Seed
-            </label>
-            <input 
-              type="text"
-              value={avatarSeed}
-              onChange={(e) => setAvatarSeed(e.target.value)}
-              placeholder="e.g. Penguin, Sparky, Alpha"
-              className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-            />
-            <span className="block text-[8px] text-slate-500 font-display">
-              Type any word to auto-generate a unique geometric robot avatar shape.
-            </span>
           </div>
 
           <div className="flex items-center justify-between pt-2">
