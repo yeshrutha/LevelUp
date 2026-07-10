@@ -494,69 +494,37 @@ export const Login = () => {
               </button>
             </div>
 
-            <p className="text-[10px] text-slate-400 font-display leading-relaxed">
-              Choose a Google account to sync profile data:
+            <p className="text-[10px] text-slate-400 font-display leading-relaxed text-left">
+              Enter your Google credentials to securely link and sync your profile data:
             </p>
 
-            <div className="space-y-2">
-              <div
-                onClick={() => triggerGoogleSignIn('alex.mercer@gmail.com', 'Alex Mercer', 'https://api.dicebear.com/7.x/adventurer/svg?seed=Alex')}
-                className="p-3 bg-slate-900 hover:bg-slate-800 border border-white/5 rounded-lg flex items-center gap-3 cursor-pointer transition-colors"
-              >
-                <div className="w-7 h-7 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 text-xs font-bold font-futuristic">AM</div>
-                <div className="text-left">
-                  <p className="text-[10px] font-bold text-white leading-none">Alex Mercer</p>
-                  <p className="text-[8px] text-slate-500 mt-1">alex.mercer@gmail.com</p>
+            <div className="pt-2">
+              <form onSubmit={handleCustomGoogleSubmit} className="space-y-3">
+                <div className="space-y-1 text-left">
+                  <label className="block text-[8px] uppercase font-futuristic text-slate-500 font-bold tracking-wider">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter your full name"
+                    value={customGoogleName}
+                    onChange={(e) => setCustomGoogleName(e.target.value)}
+                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+                  />
                 </div>
-              </div>
-
-              <div
-                onClick={() => triggerGoogleSignIn('yechu.dev@gmail.com', 'Yechu', 'https://api.dicebear.com/7.x/adventurer/svg?seed=Yechu')}
-                className="p-3 bg-slate-900 hover:bg-slate-800 border border-white/5 rounded-lg flex items-center gap-3 cursor-pointer transition-colors"
-              >
-                <div className="w-7 h-7 bg-cyan-500/20 rounded-full flex items-center justify-center text-cyan-400 text-xs font-bold font-futuristic">YC</div>
-                <div className="text-left">
-                  <p className="text-[10px] font-bold text-white leading-none">Yechu</p>
-                  <p className="text-[8px] text-slate-500 mt-1">yechu.dev@gmail.com</p>
+                <div className="space-y-1 text-left">
+                  <label className="block text-[8px] uppercase font-futuristic text-slate-500 font-bold tracking-wider">Google Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="name@gmail.com"
+                    value={customGoogleEmail}
+                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+                  />
                 </div>
-              </div>
-
-              <div
-                onClick={() => triggerGoogleSignIn('cadet@levelup.io', 'Penguin Cadet', 'https://api.dicebear.com/7.x/adventurer/svg?seed=Penguin')}
-                className="p-3 bg-slate-900 hover:bg-slate-800 border border-white/5 rounded-lg flex items-center gap-3 cursor-pointer transition-colors"
-              >
-                <div className="w-7 h-7 bg-amber-500/20 rounded-full flex items-center justify-center text-amber-400 text-xs font-bold font-futuristic">PC</div>
-                <div className="text-left">
-                  <p className="text-[10px] font-bold text-white leading-none">Penguin Cadet</p>
-                  <p className="text-[8px] text-slate-500 mt-1">cadet@levelup.io</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-white/5 pt-3">
-              <h4 className="text-[9px] font-bold font-futuristic text-slate-500 uppercase tracking-widest mb-2 text-left">
-                Use Custom Google Account
-              </h4>
-              <form onSubmit={handleCustomGoogleSubmit} className="space-y-2">
-                <input
-                  type="text"
-                  required
-                  placeholder="Full Name"
-                  value={customGoogleName}
-                  onChange={(e) => setCustomGoogleName(e.target.value)}
-                  className="w-full bg-slate-900 border border-white/5 rounded p-2 text-[10px] text-white focus:outline-none focus:border-cyan-500/40"
-                />
-                <input
-                  type="email"
-                  required
-                  placeholder="Google Email Address"
-                  value={customGoogleEmail}
-                  onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                  className="w-full bg-slate-900 border border-white/5 rounded p-2 text-[10px] text-white focus:outline-none focus:border-cyan-500/40"
-                />
                 <button
                   type="submit"
-                  className="w-full py-2 bg-gradient-to-r from-primary to-accent text-slate-950 font-futuristic font-bold text-[9px] uppercase tracking-widest rounded transition-all cursor-pointer"
+                  className="w-full py-2 bg-gradient-to-r from-primary to-accent hover:shadow-glow-accent text-slate-950 font-futuristic font-bold text-[9px] uppercase tracking-widest rounded-lg transition-all cursor-pointer mt-2"
                 >
                   Link & Authorize Google Profile
                 </button>
