@@ -180,7 +180,7 @@ export const Sidebar = () => {
             <div className="flex items-center justify-between text-[10px] uppercase font-futuristic text-slate-500 font-bold tracking-widest mb-1 px-1">
               <span>Notion Pages</span>
               <button 
-                onClick={() => createCustomPage('New Page', '📝', 14)}
+                onClick={() => createCustomPage('New Page', '📝', 0)}
                 className="hover:text-white text-slate-500 transition-colors p-0.5 rounded cursor-pointer text-sm font-bold"
                 title="Create Workspace Page"
               >
@@ -190,7 +190,7 @@ export const Sidebar = () => {
           ) : (
             <div className="flex justify-center mb-1">
               <button 
-                onClick={() => createCustomPage('New Page', '📝', 14)}
+                onClick={() => createCustomPage('New Page', '📝', 0)}
                 className="hover:text-accent text-slate-500 transition-colors p-1 bg-slate-900 border border-white/5 rounded-full flex items-center justify-center cursor-pointer"
                 title="Create Workspace Page"
               >

@@ -892,7 +892,7 @@ export const AppProvider = ({ children }) => {
       id: `cp_${Math.random().toString(36).substr(2, 9)}`,
       title,
       icon: icon || '📄',
-      termDays: parseInt(termDays) || 7,
+      termDays: typeof termDays === 'number' ? termDays : 0,
       startDate: new Date().toISOString().split('T')[0],
       tasks: taskList.map((t, idx) => {
         const id = `t_${idx}_${Math.random().toString(36).substr(2, 5)}`;

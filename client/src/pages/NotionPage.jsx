@@ -212,25 +212,35 @@ export const NotionPage = ({ pageId }) => {
             <h4 className="text-[10px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
               Term Schedule Duration
             </h4>
-            <span className="text-xs font-bold font-futuristic text-accent bg-cyan-500/10 border border-cyan-400/20 px-2 py-0.5 rounded">
-              {page.termDays} Days Term
-            </span>
+            {page.termDays > 0 ? (
+              <span className="text-xs font-bold font-futuristic text-accent bg-cyan-500/10 border border-cyan-400/20 px-2 py-0.5 rounded">
+                {page.termDays} Days Term
+              </span>
+            ) : (
+              <span className="text-xs font-bold font-futuristic text-rose-400 bg-rose-500/5 border border-rose-500/20 px-2 py-0.5 rounded animate-pulse">
+                Not Set
+              </span>
+            )}
           </div>
 
           <div className="flex gap-4 items-center">
             <Sliders size={16} className="text-slate-500" />
             <input 
               type="range"
-              min="1"
+              min="0"
               max="30"
-              value={page.termDays}
+              value={page.termDays || 0}
               onChange={(e) => updateCustomPage({ ...page, termDays: parseInt(e.target.value) })}
               className="flex-1 accent-cyan-400 bg-slate-950 rounded h-1.5 cursor-pointer"
             />
           </div>
 
           <p className="text-[10px] text-slate-500 leading-relaxed font-display">
-            Adjust the duration slider to set the term. LevelUp will generate daily checklist logs across {page.termDays} tracking days, synced to your overall career readiness metrics.
+            {page.termDays > 0 ? (
+              `Adjust the duration slider to set the term. LevelUp will generate daily checklist logs across ${page.termDays} tracking days, synced to your overall career readiness metrics.`
+            ) : (
+              "Adjust the duration slider to set the term. LevelUp will generate daily checklist logs across your timeline once a duration is configured."
+            )}
           </p>
         </div>
 
