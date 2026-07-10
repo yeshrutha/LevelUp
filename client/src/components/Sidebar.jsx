@@ -114,16 +114,6 @@ export const Sidebar = () => {
           <div className="absolute bottom-16 left-4 w-52 bg-slate-900 border border-white/10 rounded-xl p-1.5 shadow-2xl z-50 space-y-0.5 animate-fade-in">
             <button
               onClick={() => {
-                setCurrentTab('edit_profile');
-                setShowProfileMenu(false);
-              }}
-              className="w-full text-left px-3 py-2 hover:bg-white/5 rounded-lg text-[10px] uppercase font-bold tracking-wider font-futuristic text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-2.5"
-            >
-              <User size={13} className="text-accent" />
-              Edit Profile
-            </button>
-            <button
-              onClick={() => {
                 setShowShareModal(true);
                 setShowProfileMenu(false);
               }}
