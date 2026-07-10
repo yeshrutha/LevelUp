@@ -29,7 +29,6 @@ export const Settings = () => {
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [username, setUsername] = useState(user?.username || user?.displayName?.toLowerCase().replace(/\s+/g, '_') || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
-  const [editPhone, setEditPhone] = useState(user?.settings?.phoneNumber || user?.phoneNumber || '');
   const [bio, setBio] = useState(user?.settings?.bio || '');
   const [country, setCountry] = useState(user?.settings?.country || 'India');
   const [timezone, setTimezone] = useState(user?.settings?.timezone || 'GMT+5:30');
@@ -139,7 +138,6 @@ export const Settings = () => {
         settings: {
           ...(prev.settings || {}),
           username: username.trim(),
-          phoneNumber: editPhone.trim(),
           bio: bio.trim(),
           country,
           timezone
@@ -509,27 +507,14 @@ export const Settings = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Email Address</label>
-                        <input
-                          type="email"
-                          value={editEmail}
-                          onChange={(e) => setEditEmail(e.target.value)}
-                          className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Phone Number (Optional)</label>
-                        <input
-                          type="text"
-                          value={editPhone}
-                          onChange={(e) => setEditPhone(e.target.value)}
-                          placeholder="e.g. +91 98765 43210"
-                          className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-                        />
-                      </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Email Address</label>
+                      <input
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+                      />
                     </div>
 
                     <div className="space-y-1">
