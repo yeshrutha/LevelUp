@@ -1037,27 +1037,13 @@ export const Settings = () => {
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Preferred AI Provider</label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {[
-                          { id: 'Nemotron', label: 'NVIDIA NIM', sub: 'Llama 3.1 Instruct' },
-                          { id: 'Gemini', label: 'Google Gemini', sub: 'Flash 3.5 Assistant' },
-                          { id: 'OpenAI', label: 'OpenAI GPT-4', sub: 'Direct Token Access' }
-                        ].map(ai => (
-                          <div
-                            key={ai.id}
-                            onClick={() => {
-                              setAiProvider(ai.id);
-                              handleSaveSettings({ aiProvider: ai.id });
-                            }}
-                            className={`p-3 bg-slate-950/30 border rounded-xl cursor-pointer transition-all ${
-                              aiProvider === ai.id ? 'border-accent bg-primary/10 shadow-glow-accent' : 'border-white/5 hover:border-white/15'
-                            }`}
-                          >
-                            <div className="text-[10px] font-bold text-white uppercase font-futuristic">{ai.label}</div>
-                            <div className="text-[8px] text-slate-500 mt-1 uppercase font-mono">{ai.sub}</div>
-                          </div>
-                        ))}
+                      <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Active AI Provider</label>
+                      <div className="p-4 bg-slate-950/30 border border-accent/40 bg-primary/5 rounded-xl flex items-center justify-between">
+                        <div>
+                          <div className="text-[10px] font-bold text-white uppercase font-futuristic">NVIDIA NIM</div>
+                          <div className="text-[8px] text-slate-500 mt-1 uppercase font-mono">Llama 3.1 Instruct (Default Production Engine)</div>
+                        </div>
+                        <span className="text-[7px] font-bold uppercase px-2 py-0.5 rounded text-cyan-400 bg-cyan-500/10 border border-cyan-500/20">Active</span>
                       </div>
                     </div>
 
