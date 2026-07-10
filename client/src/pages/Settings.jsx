@@ -1197,10 +1197,7 @@ export const Settings = () => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Google Calendar, GitHub, Discord, Slack */}
                     {[
-                      { id: 'github', label: 'GitHub Registry', desc: 'Sync repository commits directly to workspace XP telemetry.' },
-                      { id: 'googleCalendar', label: 'Google Calendar', desc: 'Auto-populate deadlines and reviews inside schedule calendar.' },
                       { id: 'discord', label: 'Discord Webhook', desc: 'Forward achievement triggers to custom Discord chat servers.' },
                       { id: 'slack', label: 'Slack Webhook', desc: 'Dispatch daily task checklists straight to Slack channels.' }
                     ].map(item => {
@@ -1297,25 +1294,6 @@ export const Settings = () => {
                         </div>
                       );
                     })}
-
-                    {/* Coming soon integrations */}
-                    {[
-                      { label: 'Notion Sync v2', desc: 'Import Notion timeline databases straight to LevelUp workspace pages.' },
-                      { label: 'Jira Objective Registry', desc: 'Direct board task synchronization to daily placement routines.' }
-                    ].map((coming, idx) => (
-                      <div key={idx} className="p-4 bg-slate-950/20 border border-white/5 rounded-xl flex flex-col justify-between h-32 text-left opacity-40">
-                        <div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase font-futuristic">{coming.label}</span>
-                            <span className="text-[7px] font-bold uppercase px-2 py-0.5 rounded text-purple-400 bg-purple-500/10">Coming Soon</span>
-                          </div>
-                          <p className="text-[9px] text-slate-600 mt-2 leading-relaxed font-display">{coming.desc}</p>
-                        </div>
-                        <div className="w-full py-1.5 text-[8px] text-center border border-white/5 rounded uppercase font-mono select-none">
-                          Locked integration
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 </div>
               )}
