@@ -189,7 +189,7 @@ export const Alerts = () => {
                 Dual Sine frequency riser
               </span>
             </div>
-            <Play size={10} className="text-accent fill-accent shrink-0 ml-2 pointer-events-none" />
+            <Play size={10} className="text-accent fill-accent shrink-0 ml-2" style={{ pointerEvents: 'none' }} />
           </button>
 
           <button
@@ -204,7 +204,7 @@ export const Alerts = () => {
                 Ascending melody chord
               </span>
             </div>
-            <Play size={10} className="text-accent fill-accent shrink-0 ml-2 pointer-events-none" />
+            <Play size={10} className="text-accent fill-accent shrink-0 ml-2" style={{ pointerEvents: 'none' }} />
           </button>
 
           <button
@@ -219,7 +219,7 @@ export const Alerts = () => {
                 Cinematic promotion fanfare
               </span>
             </div>
-            <Play size={10} className="text-accent fill-accent shrink-0 ml-2 pointer-events-none" />
+            <Play size={10} className="text-accent fill-accent shrink-0 ml-2" style={{ pointerEvents: 'none' }} />
           </button>
         </div>
       </div>
