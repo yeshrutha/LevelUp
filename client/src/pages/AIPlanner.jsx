@@ -136,10 +136,6 @@ export default function AIPlanner() {
           <h2 className="text-2xl font-futuristic font-bold text-white tracking-wide uppercase">
             AI Term Workspace Planner
           </h2>
-          <p className="text-xs text-slate-400 font-display leading-relaxed max-w-2xl">
-            Input your targets (courses, placement readiness, gym routines, gaming hours). 
-            The LevelUp AI Orchestrator will automatically instantiate trackable daily habits, calendar milestones, and alert priorities.
-          </p>
         </div>
       </div>
 
