@@ -4,7 +4,7 @@ import {
   User, Shield, Lock, Bell, Palette, Cpu, Mail, Calendar, Database, Link, 
   HelpCircle, AlertOctagon, Terminal, Globe, Clock, Plus, Trash2, Eye, EyeOff, 
   ShieldCheck, Check, Power, RefreshCw, Activity, Layers, Play, CheckSquare, Sparkles, ChevronDown, Settings as SettingsIcon,
-  Volume2, VolumeX, Zap, Award
+  Volume2, VolumeX, Zap, Award, Sun, Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CUTE_AVATARS, AvatarRenderer } from '../components/AvatarRenderer';
