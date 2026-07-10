@@ -456,94 +456,182 @@ app.post('/api/goal', async (req, res) => {
 });
 
 // --- Authentication Routes ---
-app.post('/api/auth/register', async (req, res) => {
-  const { email, password, displayName } = req.body;
-  if (!email || !password || password.length < 8) {
-    return res.status(400).json({ error: 'Email and a password of at least 8 characters are required.' });
+app.post('/api/auth/initiate-verify', async (req, res) => {
+  const { email } = req.body;
+  const targetEmail = (email || '').toLowerCase().trim();
+  if (!targetEmail || !targetEmail.includes('@')) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
   }
 
-  const normalizedEmail = email.toLowerCase().trim();
-  const passwordHash = await bcrypt.hash(password, 12);
-
   try {
+    let user = null;
+    let hadPassword = false;
+
     if (isConnectedToMongo) {
-      const existing = await UserData.findOne({ email: normalizedEmail });
-      if (existing) {
-        return res.status(409).json({ error: 'Email already registered.' });
+      user = await UserData.findOne({ email: targetEmail });
+      if (!user) {
+        // Initialize stub profile for new email registration
+        const profile = createUserProfile(targetEmail);
+        profile.isProfileSetupComplete = false; // flag to trigger setup popup
+        user = await UserData.create({
+          email: targetEmail,
+          passwordHash: null,
+          phoneNumber: '',
+          emailVerified: false,
+          phoneVerified: false,
+          profile,
+          habitList: [],
+          customPages: [],
+          calendar: [],
+          goal: { title: '', targetDate: '' }
+        });
+      } else {
+        hadPassword = !!user.passwordHash;
       }
-
-      const profile = createUserProfile(normalizedEmail, displayName);
-      const created = await UserData.create({
-        email: normalizedEmail,
-        passwordHash,
-        phoneNumber: '',
-        emailVerified: false,
-        phoneVerified: false,
-        profile,
-        habitList: [],
-        customPages: [],
-        calendar: [],
-        goal: { title: '', targetDate: '' }
-      });
-
-      const token = createToken(created);
-      sendRegisterEmail(normalizedEmail, displayName || normalizedEmail.split('@')[0]);
-      return res.json({ token, ...buildUserPayload(created) });
+    } else {
+      user = localDB[targetEmail];
+      if (!user) {
+        user = getOrInitUser(targetEmail);
+        user.profile.isProfileSetupComplete = false;
+      } else {
+        hadPassword = !!user.passwordHash;
+      }
     }
 
-    const existing = localDB[normalizedEmail];
-    if (existing && existing.passwordHash) {
-      return res.status(409).json({ error: 'Email already registered.' });
+    // Generate 6 digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    user.verificationCode = code;
+    user.verificationExpires = expires;
+
+    if (isConnectedToMongo) {
+      await user.save();
     }
 
-    const user = getOrInitUser(normalizedEmail, displayName);
-    user.passwordHash = passwordHash;
-    const token = createToken(user);
-    sendRegisterEmail(normalizedEmail, displayName || normalizedEmail.split('@')[0]);
-    return res.json({ token, ...buildUserPayload(user) });
+    // Send email via Resend
+    try {
+      await EmailService.sendVerificationEmail(targetEmail, code);
+      console.log(`✉️ Verification code sent to: ${targetEmail}. Code: ${code}`);
+    } catch (mailErr) {
+      console.error('❌ Resend: Error sending verification email:', mailErr.message);
+    }
+
+    return res.json({ success: true, isNewUser: !hadPassword, code });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/confirm-verify', async (req, res) => {
+  const { email, code } = req.body;
+  const targetEmail = (email || '').toLowerCase().trim();
+  if (!targetEmail || !code) {
+    return res.status(400).json({ error: 'Email and verification code are required.' });
+  }
+
+  try {
+    let user = null;
+    if (isConnectedToMongo) {
+      user = await UserData.findOne({ email: targetEmail });
+    } else {
+      user = localDB[targetEmail];
+    }
+
+    if (!user || user.verificationCode !== code || new Date() > new Date(user.verificationExpires)) {
+      return res.status(400).json({ error: 'Invalid or expired verification code.' });
+    }
+
+    // Clear verification codes, set emailVerified
+    user.verificationCode = undefined;
+    user.verificationExpires = undefined;
+    user.emailVerified = true;
+    if (!user.profile) user.profile = {};
+    user.profile.emailVerified = true;
+
+    if (isConnectedToMongo) {
+      user.markModified('profile');
+      await user.save();
+    }
+
+    const isNewUser = !user.passwordHash;
+    return res.json({ success: true, isNewUser });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/set-password', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password || password.length < 8) {
+    return res.status(400).json({ error: 'Email and a password of at least 8 characters are required.' });
+  }
+
+  const targetEmail = email.toLowerCase().trim();
+
+  try {
+    let user = null;
+    if (isConnectedToMongo) {
+      user = await UserData.findOne({ email: targetEmail });
+    } else {
+      user = localDB[targetEmail];
+    }
+
+    if (!user || !user.emailVerified) {
+      return res.status(400).json({ error: 'Email address must be verified first.' });
+    }
+
+    // Save password hash
+    const passwordHash = await bcrypt.hash(password, 12);
+    user.passwordHash = passwordHash;
+
+    if (isConnectedToMongo) {
+      await user.save();
+    }
+
+    // Generate login token
+    const token = createToken(user);
+
+    // Send welcome email
+    try {
+      await EmailService.sendWelcomeEmail(targetEmail, user.profile?.displayName || targetEmail.split('@')[0]);
+    } catch (mailErr) {
+      console.error('❌ Resend: Error sending welcome email:', mailErr.message);
+    }
+
+    return res.json({ success: true, token, ...buildUserPayload(user) });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/password-login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
-  const normalizedEmail = email.toLowerCase().trim();
+  const targetEmail = email.toLowerCase().trim();
 
   try {
+    let user = null;
     if (isConnectedToMongo) {
-      const existing = await UserData.findOne({ email: normalizedEmail }).select('+passwordHash');
-      if (!existing || !existing.passwordHash) {
-        return res.status(401).json({ error: 'Invalid email or password.' });
-      }
-
-      const validPassword = await bcrypt.compare(password, existing.passwordHash);
-      if (!validPassword) {
-        return res.status(401).json({ error: 'Invalid email or password.' });
-      }
-
-      const token = createToken(existing);
-      sendLoginEmail(normalizedEmail, existing.profile?.displayName || existing.displayName || normalizedEmail.split('@')[0]);
-      return res.json({ token, ...buildUserPayload(existing) });
+      user = await UserData.findOne({ email: targetEmail }).select('+passwordHash');
+    } else {
+      user = localDB[targetEmail];
     }
 
-    const existing = localDB[normalizedEmail];
-    if (!existing || !existing.passwordHash) {
+    if (!user || !user.passwordHash) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    const validPassword = await bcrypt.compare(password, existing.passwordHash);
+    const validPassword = await bcrypt.compare(password, user.passwordHash);
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    const token = createToken(existing);
-    sendLoginEmail(normalizedEmail, existing.profile?.displayName || existing.displayName || normalizedEmail.split('@')[0]);
-    return res.json({ token, ...buildUserPayload(existing) });
+    const token = createToken(user);
+    return res.json({ success: true, token, ...buildUserPayload(user) });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

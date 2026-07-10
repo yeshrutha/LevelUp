@@ -448,6 +448,93 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Verification-First Authentication Helpers
+  const initiateVerify = async (email) => {
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/initiate-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, error: 'Terminal offline.' };
+    }
+  };
+
+  const confirmVerify = async (email, code) => {
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/confirm-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code })
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, error: 'Terminal offline.' };
+    }
+  };
+
+  const setPasswordAndRegister = async (email, password, rememberMe = true) => {
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/set-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) return { success: false, error: data.error || 'Password setup failed.' };
+
+      handleLoginSuccess(data, rememberMe);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: 'Terminal offline.' };
+    }
+  };
+
+  const loginWithPassword = async (email, password, rememberMe = true) => {
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/password-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) return { success: false, error: data.error || 'Password verification failed.' };
+
+      handleLoginSuccess(data, rememberMe);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: 'Terminal offline.' };
+    }
+  };
+
+  const handleLoginSuccess = (data, rememberMe) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem('levelup_token', data.token);
+    storage.setItem('levelup_user', JSON.stringify(data.profile));
+    if (rememberMe) {
+      localStorage.setItem('levelup_remember_me', 'true');
+    } else {
+      localStorage.removeItem('levelup_remember_me');
+    }
+
+    setToken(data.token);
+    setUser(data.profile);
+
+    if (Array.isArray(data.habitList)) setHabitList(data.habitList);
+    if (data.habits) setHabits(data.habits);
+    if (Array.isArray(data.calendar)) setCalendar(data.calendar);
+    if (Array.isArray(data.customPages)) setCustomPages(data.customPages);
+    if (data.goal) setDashboardGoal(data.goal);
+
+    if (data.profile.themeMode) setThemeMode(data.profile.themeMode);
+    if (data.profile.isMuted !== undefined) setIsMuted(data.profile.isMuted);
+    
+    triggerToast('Authenticated', 'System initialized successfully!', 'success');
+    setCurrentTab('dashboard');
+  };
+
   const loginWithGoogle = async (email, displayName, avatar, rememberMe) => {
     try {
       const res = await fetch('http://localhost:5000/api/auth/google', {
@@ -1074,6 +1161,7 @@ export const AppProvider = ({ children }) => {
       notifications, setNotifications, markAllNotificationsRead, purgeAllNotifications,
       addXP, loginUser, logoutUser, resetSystem, verifyPassword,
       forgotPassword, resetPassword, sendVerificationCode, verifyEmailCode, loginWithGoogle, token, setToken,
+      initiateVerify, confirmVerify, setPasswordAndRegister, loginWithPassword,
       customPages, createCustomPage, updateCustomPage, deleteCustomPage, togglePageTask,
       themeMode, setThemeMode: changeThemeMode,
       toasts, triggerToast,

@@ -16,6 +16,7 @@ import { Settings } from './pages/Settings';
 import AIPlanner from './pages/AIPlanner';
 import { EditProfile } from './pages/EditProfile';
 import { ShareProfileModal } from './components/ShareProfileModal';
+import { ProfileSetupModal } from './components/ProfileSetupModal';
 
 // Toast Notification Item
 const ToastItem = ({ toast }) => {
@@ -113,6 +114,9 @@ const AppContent = () => {
 
       {/* Share profile credentials portal */}
       <ShareProfileModal />
+
+      {/* Force onboarding setup for newly registered email coordinates */}
+      <ProfileSetupModal />
     </div>
   );
 };
