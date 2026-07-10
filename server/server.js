@@ -198,7 +198,10 @@ const createToken = (user) => jwt.sign(
 );
 
 const buildUserPayload = (userData) => ({
-  profile: userData.profile,
+  profile: {
+    ...(userData.profile || {}),
+    email: userData.email
+  },
   habits: userData.habits,
   habitList: userData.habitList,
   customPages: userData.customPages,
@@ -255,9 +258,16 @@ app.get('/api/profile', async (req, res) => {
           profile
         });
       }
-      return res.json(data.profile);
+      return res.json({
+        ...(data.profile || {}),
+        email: data.email
+      });
     } else {
-      return res.json(getOrInitUser(req.user.email).profile);
+      const user = getOrInitUser(req.user.email);
+      return res.json({
+        ...(user.profile || {}),
+        email: req.user.email
+      });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
