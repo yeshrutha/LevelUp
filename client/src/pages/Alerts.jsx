@@ -55,7 +55,7 @@ export const Alerts = () => {
 
   // Sound Test synthesis callers
   const testSound = (type) => {
-    playAlertSound(type);
+    playAlertSound(type, true);
     if (type === 'success') {
       triggerToast('Chime Test', 'Ascending success chord played', 'success');
     } else if (type === 'xp') {

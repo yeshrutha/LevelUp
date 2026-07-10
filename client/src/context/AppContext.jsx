@@ -180,10 +180,17 @@ export const AppProvider = ({ children }) => {
   };
 
   // Web Audio API custom synthesizer chimes (Success / Level Progress)
-  const playAlertSound = (type = 'success') => {
-    if (isMuted) return;
+  const playAlertSound = (type = 'success', force = false) => {
+    if (isMuted && !force) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      
+      const ctx = new AudioContextClass();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
@@ -192,32 +199,35 @@ export const AppProvider = ({ children }) => {
       const now = ctx.currentTime;
       
       if (type === 'success') {
+        osc.type = 'triangle';
         osc.frequency.setValueAtTime(587.33, now); // D5
         osc.frequency.setValueAtTime(880, now + 0.08); // A5
-        gain.gain.setValueAtTime(0.04, now);
+        gain.gain.setValueAtTime(0.15, now);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-        osc.start();
+        osc.start(now);
         osc.stop(now + 0.25);
       } else if (type === 'xp') {
+        osc.type = 'sine';
         osc.frequency.setValueAtTime(523.25, now); // C5
         osc.frequency.setValueAtTime(659.25, now + 0.06); // E5
         osc.frequency.setValueAtTime(783.99, now + 0.12); // G5
-        gain.gain.setValueAtTime(0.03, now);
+        gain.gain.setValueAtTime(0.12, now);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
-        osc.start();
+        osc.start(now);
         osc.stop(now + 0.28);
       } else if (type === 'rank' || type === 'trophy') {
+        osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(440, now); // A4
         osc.frequency.setValueAtTime(554.37, now + 0.08); // C#5
         osc.frequency.setValueAtTime(659.25, now + 0.16); // E5
         osc.frequency.setValueAtTime(880, now + 0.24); // A5
-        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.setValueAtTime(0.18, now);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
-        osc.start();
+        osc.start(now);
         osc.stop(now + 0.45);
       }
     } catch (e) {
-      // Audio context blocked
+      console.warn('Web Audio playback failed:', e.message);
     }
   };
 
