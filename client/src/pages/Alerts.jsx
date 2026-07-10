@@ -177,8 +177,11 @@ export const Alerts = () => {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => testSound('success')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); testSound('success'); } }}
             className="flex items-center justify-between p-3 rounded-lg bg-slate-950 hover:bg-slate-900 border border-white/5 text-left cursor-pointer transition-colors"
           >
             <div>
@@ -189,11 +192,23 @@ export const Alerts = () => {
                 Dual Sine frequency riser
               </span>
             </div>
-            <Play size={10} className="text-accent fill-accent shrink-0 ml-2" style={{ pointerEvents: 'none' }} />
-          </button>
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                testSound('success');
+              }}
+              className="p-1.5 hover:bg-white/10 rounded-full cursor-pointer flex items-center justify-center transition-colors"
+              title="Play Success Chime"
+            >
+              <Play size={10} className="text-accent fill-accent shrink-0" />
+            </div>
+          </div>
 
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => testSound('xp')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); testSound('xp'); } }}
             className="flex items-center justify-between p-3 rounded-lg bg-slate-950 hover:bg-slate-900 border border-white/5 text-left cursor-pointer transition-colors"
           >
             <div>
@@ -204,11 +219,23 @@ export const Alerts = () => {
                 Ascending melody chord
               </span>
             </div>
-            <Play size={10} className="text-accent fill-accent shrink-0 ml-2" style={{ pointerEvents: 'none' }} />
-          </button>
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                testSound('xp');
+              }}
+              className="p-1.5 hover:bg-white/10 rounded-full cursor-pointer flex items-center justify-center transition-colors"
+              title="Play XP Progress Chord"
+            >
+              <Play size={10} className="text-accent fill-accent shrink-0" />
+            </div>
+          </div>
 
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={() => testSound('rank')}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); testSound('rank'); } }}
             className="flex items-center justify-between p-3 rounded-lg bg-slate-950 hover:bg-slate-900 border border-white/5 text-left cursor-pointer transition-colors"
           >
             <div>
@@ -219,8 +246,17 @@ export const Alerts = () => {
                 Cinematic promotion fanfare
               </span>
             </div>
-            <Play size={10} className="text-accent fill-accent shrink-0 ml-2" style={{ pointerEvents: 'none' }} />
-          </button>
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                testSound('rank');
+              }}
+              className="p-1.5 hover:bg-white/10 rounded-full cursor-pointer flex items-center justify-center transition-colors"
+              title="Play Rank Fanfare"
+            >
+              <Play size={10} className="text-accent fill-accent shrink-0" />
+            </div>
+          </div>
         </div>
       </div>
 
