@@ -4,7 +4,7 @@ import { CheckCircle2, Flame, Award, Trash2, Plus, Info, AlertTriangle, Bell } f
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Habits = () => {
-  const { habits, toggleHabit, habitList, addHabit, deleteHabit, user, setUser } = useApp();
+  const { habits, toggleHabit, habitList, addHabit, deleteHabit, user, updateHabitReminder } = useApp();
   const today = new Date().toISOString().split('T')[0];
   
   // Modal states for habit creation
@@ -13,7 +13,7 @@ export const Habits = () => {
   const [newHabitHour, setNewHabitHour] = useState('08');
   const [newHabitMinute, setNewHabitMinute] = useState('00');
   const [newHabitPeriod, setNewHabitPeriod] = useState('AM');
-  
+
   // Get today's logs
   const todayLogs = habits[today] || {};
   const checkedCount = Object.keys(todayLogs).filter(name => habitList.includes(name) && todayLogs[name]).length;
@@ -206,16 +206,7 @@ export const Habits = () => {
                     <button 
                       onClick={() => {
                         const reminder = user?.habitReminders?.[habitName] || { enabled: false, time: '08:00' };
-                        setUser(prev => ({
-                          ...prev,
-                          habitReminders: {
-                            ...(prev.habitReminders || {}),
-                            [habitName]: {
-                              enabled: !reminder.enabled,
-                              time: reminder.time || '08:00'
-                            }
-                          }
-                        }));
+                        updateHabitReminder(habitName, !reminder.enabled, reminder.time || '08:00');
                       }}
                       className={`flex items-center gap-1 text-[8px] uppercase font-futuristic tracking-wider cursor-pointer transition-colors ${
                         user?.habitReminders?.[habitName]?.enabled ? 'text-cyan-400 font-bold' : 'text-slate-500 hover:text-slate-400'
@@ -232,16 +223,7 @@ export const Habits = () => {
                         value={user.habitReminders[habitName].time || '08:00'}
                         onChange={(e) => {
                           const newTime = e.target.value;
-                          setUser(prev => ({
-                            ...prev,
-                            habitReminders: {
-                              ...(prev.habitReminders || {}),
-                              [habitName]: {
-                                enabled: true,
-                                time: newTime
-                              }
-                            }
-                          }));
+                          updateHabitReminder(habitName, true, newTime);
                         }}
                         className="bg-slate-950 border border-white/10 rounded px-1.5 py-0.5 text-[9px] text-cyan-400 focus:outline-none focus:border-cyan-500/40 w-16 text-center"
                       />

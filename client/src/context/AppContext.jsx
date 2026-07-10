@@ -1112,19 +1112,45 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  const updateHabitReminder = (habitName, enabled, time) => {
+    setUser(prev => {
+      const updatedUser = {
+        ...prev,
+        habitReminders: {
+          ...(prev?.habitReminders || {}),
+          [habitName]: { enabled, time }
+        }
+      };
+      if (prev?.email) {
+        const key = prev.email.toLowerCase();
+        localStorage.setItem(`levelup_user_${key}`, JSON.stringify(updatedUser));
+        localStorage.setItem('levelup_user', JSON.stringify(updatedUser));
+      }
+      return updatedUser;
+    });
+  };
+
   // Habit List Customizer Helper
   const addHabit = (name, reminder = null) => {
     if (!name || habitList.includes(name)) return;
     setHabitList(prev => [...prev, name]);
     
     if (reminder) {
-      setUser(prev => ({
-        ...prev,
-        habitReminders: {
-          ...(prev.habitReminders || {}),
-          [name]: { enabled: true, time: reminder }
+      setUser(prev => {
+        const updatedUser = {
+          ...prev,
+          habitReminders: {
+            ...(prev?.habitReminders || {}),
+            [name]: { enabled: true, time: reminder }
+          }
+        };
+        if (prev?.email) {
+          const key = prev.email.toLowerCase();
+          localStorage.setItem(`levelup_user_${key}`, JSON.stringify(updatedUser));
+          localStorage.setItem('levelup_user', JSON.stringify(updatedUser));
         }
-      }));
+        return updatedUser;
+      });
     }
 
     addXP(10, `Tracked custom habit: "${name}"`);
@@ -1134,9 +1160,15 @@ export const AppProvider = ({ children }) => {
   const deleteHabit = (name) => {
     setHabitList(prev => prev.filter(h => h !== name));
     setUser(prev => {
-      const copy = { ...(prev.habitReminders || {}) };
+      const copy = { ...(prev?.habitReminders || {}) };
       delete copy[name];
-      return { ...prev, habitReminders: copy };
+      const updatedUser = { ...prev, habitReminders: copy };
+      if (prev?.email) {
+        const key = prev.email.toLowerCase();
+        localStorage.setItem(`levelup_user_${key}`, JSON.stringify(updatedUser));
+        localStorage.setItem('levelup_user', JSON.stringify(updatedUser));
+      }
+      return updatedUser;
     });
   };
 
@@ -1189,7 +1221,8 @@ export const AppProvider = ({ children }) => {
       toasts, triggerToast,
       isMuted, setIsMuted: changeMuteState,
       showShareModal, setShowShareModal,
-      playAlertSound
+      playAlertSound,
+      updateHabitReminder
     }}>
       {children}
     </AppContext.Provider>
