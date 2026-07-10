@@ -71,17 +71,7 @@ export const Settings = () => {
 
 
   // Integrations states
-  const [integrations, setIntegrations] = useState(settings.integrations || {
-    github: false,
-    googleCalendar: false,
-    discord: false,
-    slack: false
-  });
-  const [connectingService, setConnectingService] = useState(null);
-  const [discordUrlInput, setDiscordUrlInput] = useState(settings.discordUrl || '');
-  const [slackUrlInput, setSlackUrlInput] = useState(settings.slackUrl || '');
-  const [showDiscordInput, setShowDiscordInput] = useState(false);
-  const [showSlackInput, setShowSlackInput] = useState(false);
+
 
   const getDeviceDetails = () => {
     const ua = navigator.userAgent;
@@ -129,35 +119,7 @@ export const Settings = () => {
     return () => { active = false; };
   }, []);
 
-  const saveWebhookUrl = (service) => {
-    const url = service === 'discord' ? discordUrlInput : slackUrlInput;
-    if (!url.trim()) return;
-    
-    setIntegrations(prev => {
-      const next = { ...prev, [service]: true };
-      handleSaveSettings({ 
-        integrations: next,
-        [service === 'discord' ? 'discordUrl' : 'slackUrl']: url.trim()
-      });
-      return next;
-    });
 
-    if (service === 'discord') setShowDiscordInput(false);
-    if (service === 'slack') setShowSlackInput(false);
-  };
-
-  const removeWebhookUrl = (service) => {
-    setIntegrations(prev => {
-      const next = { ...prev, [service]: false };
-      handleSaveSettings({ 
-        integrations: next,
-        [service === 'discord' ? 'discordUrl' : 'slackUrl']: ''
-      });
-      return next;
-    });
-    if (service === 'discord') setDiscordUrlInput('');
-    if (service === 'slack') setSlackUrlInput('');
-  };
 
   // Password confirmation modal overlay states
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -323,19 +285,7 @@ export const Settings = () => {
     triggerToast('Data Exported', 'Telemetry profile downloaded in JSON format.', 'success');
   };
 
-  // Mock integration connector
-  const toggleIntegration = (service) => {
-    if (connectingService) return;
-    setConnectingService(service);
-    setTimeout(() => {
-      setIntegrations(prev => {
-        const next = { ...prev, [service]: !prev[service] };
-        handleSaveSettings({ integrations: next });
-        return next;
-      });
-      setConnectingService(null);
-    }, 1000);
-  };
+
 
   // Secure Purge / Reset trigger
   const handleDangerActionTrigger = (action) => {
@@ -396,7 +346,6 @@ export const Settings = () => {
     { id: 'ai', label: 'AI Settings', icon: Cpu },
     { id: 'email', label: 'Email Prefs', icon: Mail },
     { id: 'preferences', label: 'Preferences', icon: Calendar },
-    { id: 'integrations', label: 'Integrations', icon: Link },
     { id: 'help', label: 'Help & Info', icon: HelpCircle },
     { id: 'danger', label: 'Danger Zone', icon: AlertOctagon }
   ];
@@ -1187,116 +1136,7 @@ export const Settings = () => {
 
 
 
-              {/* Integrations Category */}
-              {activeTab === 'integrations' && (
-                <div className="space-y-6">
-                  <div className="border-b border-white/5 pb-3">
-                    <h3 className="text-xs font-futuristic font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
-                      <Link size={14} className="text-accent" /> Sync Integrations
-                    </h3>
-                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {[
-                      { id: 'discord', label: 'Discord Webhook', desc: 'Forward achievement triggers to custom Discord chat servers.' },
-                      { id: 'slack', label: 'Slack Webhook', desc: 'Dispatch daily task checklists straight to Slack channels.' }
-                    ].map(item => {
-                      const isConnected = integrations[item.id] === true;
-                      const isWebhook = item.id === 'discord' || item.id === 'slack';
-                      const isInputOpen = item.id === 'discord' ? showDiscordInput : showSlackInput;
-                      const currentUrl = item.id === 'discord' ? discordUrlInput : slackUrlInput;
-
-                      return (
-                        <div key={item.id} className="p-4 bg-slate-950/40 border border-white/5 rounded-xl flex flex-col justify-between min-h-32 text-left">
-                          <div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-[10px] font-bold text-white uppercase font-futuristic">{item.label}</span>
-                              <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded ${
-                                isConnected ? 'text-emerald-400 bg-emerald-500/10' : 'text-slate-500 bg-slate-800'
-                              }`}>
-                                {isConnected ? 'Connected' : 'Disconnected'}
-                              </span>
-                            </div>
-                            
-                            {!isInputOpen && (
-                              <p className="text-[9px] text-slate-500 mt-2 leading-relaxed font-display">{item.desc}</p>
-                            )}
-
-                            {isConnected && isWebhook && !isInputOpen && (
-                              <div className="mt-2 p-1.5 bg-slate-950 rounded border border-white/5 text-[8px] text-slate-400 font-mono truncate">
-                                URL: {currentUrl.slice(0, 25)}...
-                              </div>
-                            )}
-
-                            {isWebhook && isInputOpen && (
-                              <div className="mt-2 space-y-2">
-                                <label className="block text-[8px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Webhook URL</label>
-                                <input
-                                  type="text"
-                                  placeholder={item.id === 'discord' ? 'https://discord.com/api/webhooks/...' : 'https://hooks.slack.com/services/...'}
-                                  value={currentUrl}
-                                  onChange={(e) => item.id === 'discord' ? setDiscordUrlInput(e.target.value) : setSlackUrlInput(e.target.value)}
-                                  className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-[9px] text-white focus:outline-none focus:border-cyan-500/40 font-mono"
-                                />
-                                <div className="flex gap-2 justify-end">
-                                  <button
-                                    onClick={() => item.id === 'discord' ? setShowDiscordInput(false) : setShowSlackInput(false)}
-                                    className="px-2 py-1 border border-white/10 text-slate-400 font-futuristic text-[8px] uppercase tracking-wider rounded"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    onClick={() => saveWebhookUrl(item.id)}
-                                    className="px-2 py-1 bg-accent text-slate-950 font-futuristic font-bold text-[8px] uppercase tracking-wider rounded"
-                                  >
-                                    Save
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {!isInputOpen && (
-                            <div className="mt-4 flex gap-2">
-                              {isWebhook && isConnected && (
-                                <button
-                                  onClick={() => item.id === 'discord' ? setShowDiscordInput(true) : setShowSlackInput(true)}
-                                  className="flex-1 py-1.5 bg-transparent border border-white/10 text-white hover:bg-white/5 text-[8px] font-bold uppercase rounded transition-colors cursor-pointer"
-                                >
-                                  Edit URL
-                                </button>
-                              )}
-                              <button
-                                onClick={() => {
-                                  if (isWebhook && !isConnected) {
-                                    if (item.id === 'discord') setShowDiscordInput(true);
-                                    if (item.id === 'slack') setShowSlackInput(true);
-                                  } else if (isWebhook && isConnected) {
-                                    removeWebhookUrl(item.id);
-                                  } else {
-                                    toggleIntegration(item.id);
-                                  }
-                                }}
-                                disabled={connectingService === item.id}
-                                className={`flex-1 py-1.5 text-[8px] font-bold uppercase rounded border transition-colors cursor-pointer ${
-                                  isConnected 
-                                    ? 'bg-transparent border-rose-500/20 text-rose-400 hover:bg-rose-500/10' 
-                                    : 'bg-transparent border-accent text-accent hover:bg-primary/20'
-                                }`}
-                              >
-                                {connectingService === item.id 
-                                  ? 'Syncing parameters...' 
-                                  : isConnected ? 'Disconnect' : 'Connect accounts'
-                                }
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
 
               {/* Help & Support Category */}
               {activeTab === 'help' && (
