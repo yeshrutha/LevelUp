@@ -135,7 +135,7 @@ export const Alerts = () => {
       {/* KPI Counters Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="glass-panel p-4 rounded-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full blur-2xl" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full blur-2xl" style={{ pointerEvents: 'none' }} />
           <span className="text-[9px] uppercase font-futuristic text-slate-400 tracking-widest block mb-1">
             Total Notifications
           </span>
@@ -143,7 +143,7 @@ export const Alerts = () => {
         </div>
 
         <div className="glass-panel p-4 rounded-xl relative overflow-hidden">
-          {unreadCount > 0 && <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl" />}
+          {unreadCount > 0 && <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl" style={{ pointerEvents: 'none' }} />}
           <span className="text-[9px] uppercase font-futuristic text-slate-400 tracking-widest block mb-1">
             Unread Notifications
           </span>
@@ -153,7 +153,7 @@ export const Alerts = () => {
         </div>
 
         <div className="glass-panel p-4 rounded-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl" style={{ pointerEvents: 'none' }} />
           <span className="text-[9px] uppercase font-futuristic text-slate-400 tracking-widest block mb-1">
             Audio Sounds
           </span>
@@ -165,7 +165,7 @@ export const Alerts = () => {
 
       {/* Extraordinary Sound Test Synth Center */}
       <div className="glass-panel p-5 rounded-2xl relative overflow-hidden border-white/10">
-        <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-br from-primary/10 to-accent/10 rounded-full blur-2xl" />
+        <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-br from-primary/10 to-accent/10 rounded-full blur-2xl" style={{ pointerEvents: 'none' }} />
         
         <h2 className="text-xs font-black font-futuristic uppercase tracking-widest text-slate-200 mb-3 flex items-center gap-2">
           <Terminal size={14} className="text-accent" />
