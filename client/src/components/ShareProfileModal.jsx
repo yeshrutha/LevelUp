@@ -70,111 +70,137 @@ export const ShareProfileModal = () => {
       const level = user.level || 1;
       const rank = user.rank || 'Iron I';
 
-      // --- Cyberpunk Neon Dark Theme Design ---
+      // --- Executive Light Theme Certificate Design ---
       
       // Page Background
-      doc.setFillColor(11, 15, 23); // #0b0f17
+      doc.setFillColor(255, 255, 255); // White page
       doc.rect(0, 0, 210, 297, 'F');
 
-      // Borders
-      doc.setDrawColor(244, 63, 94); // Rose-500
-      doc.setLineWidth(1.2);
-      doc.rect(6, 6, 198, 285, 'D');
-
-      doc.setDrawColor(168, 85, 247); // Purple-500
-      doc.setLineWidth(0.4);
+      // Sleek Dual Borders
+      doc.setDrawColor(15, 23, 42); // Slate-900
+      doc.setLineWidth(1.0);
       doc.rect(8, 8, 194, 281, 'D');
 
-      // Top Banner
-      doc.setFillColor(17, 24, 39); // #111827
-      doc.rect(10, 10, 190, 32, 'F');
-      
+      doc.setDrawColor(6, 182, 212); // Cyan Accent
+      doc.setLineWidth(0.4);
+      doc.rect(10, 10, 190, 277, 'D');
+
+      // Top Header Band
+      doc.setFillColor(248, 250, 252); // Slate-50
+      doc.rect(12, 12, 186, 30, 'F');
+      doc.setDrawColor(226, 232, 240); // Slate-200
+      doc.rect(12, 12, 186, 30, 'D');
+
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(244, 63, 94); // Rose
-      doc.text('LEVELUP PROFILE DATA REPORT', 15, 24);
-      
-      doc.setFontSize(9);
-      doc.setTextColor(168, 85, 247); // Purple
-      doc.text('MASTER TERMINAL OS VERIFIED // SYNC_STATUS: STABLE', 15, 32);
+      doc.setFontSize(20);
+      doc.setTextColor(15, 23, 42); // Dark slate
+      doc.text('LEVELUP PROFILE REPORT CARD', 18, 23);
+
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139); // Muted slate
+      doc.text('VERIFIED PERFORMANCE CREDENTIALS // SYSTEM RECORD SECURE', 18, 30);
+      doc.text(`DATE ISSUED: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 18, 36);
 
       // Section 1: User Identity
-      doc.setFillColor(20, 26, 40); // Dark Gray
+      doc.setFillColor(248, 250, 252); // Slate-50
       doc.rect(15, 52, 180, 52, 'F');
-      doc.setDrawColor(30, 41, 59);
+      doc.setDrawColor(226, 232, 240);
       doc.rect(15, 52, 180, 52, 'D');
 
-      doc.setFontSize(13);
-      doc.setTextColor(255, 255, 255);
-      doc.text('AGENT IDENTITY MATRIX', 20, 62);
+      // Cyan accent bar on left
+      doc.setFillColor(6, 182, 212);
+      doc.rect(15, 52, 2, 52, 'F');
 
-      doc.setFontSize(10);
-      doc.setTextColor(148, 163, 184);
-      doc.text('Agent Display Alias:', 20, 72);
-      doc.text('Linked Email Node:', 20, 80);
-      doc.text('Assigned Skill Class:', 20, 88);
-      doc.text('Overall Level / XP Rank:', 20, 96);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(15, 23, 42);
+      doc.text('AGENT IDENTITY MATRIX', 22, 62);
 
-      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Agent Display Name:', 22, 72);
+      doc.text('Linked Email:', 22, 80);
+      doc.text('Assigned Tier Rank:', 22, 88);
+      doc.text('Level & Experience (XP):', 22, 96);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
       doc.text(user.displayName.toUpperCase(), 75, 72);
       doc.text(user.email, 75, 80);
       doc.text(rank.toUpperCase(), 75, 88);
-      doc.text(`LEVEL ${level} // ${xp} XP`, 75, 96);
+      doc.text(`LEVEL ${level}   [ ${xp} XP TOTAL ]`, 75, 96);
 
       // Section 2: Consistency Tracker & Metrics
-      doc.setFillColor(20, 26, 40);
+      doc.setFillColor(248, 250, 252); // Slate-50
       doc.rect(15, 115, 180, 78, 'F');
+      doc.setDrawColor(226, 232, 240);
       doc.rect(15, 115, 180, 78, 'D');
 
-      doc.setFontSize(13);
-      doc.setTextColor(244, 63, 94); // Rose
-      doc.text('HABITS CONSISTENCY INSIGHTS', 20, 126);
+      // Indigo accent bar on left
+      doc.setFillColor(79, 70, 229);
+      doc.rect(15, 115, 2, 78, 'F');
 
-      doc.setFontSize(10);
-      doc.setTextColor(148, 163, 184);
-      doc.text('Daily Readiness Rating:', 20, 137);
-      doc.text('Current Streak Level:', 20, 145);
-      doc.text('Monitored Habit Streams:', 20, 153);
-      doc.text('Custom Workspaces Task Count:', 20, 161);
-      doc.text('Active Consistency Days:', 20, 169);
-      doc.text('Operative Grade Category:', 20, 177);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(15, 23, 42);
+      doc.text('HABITS CONSISTENCY INSIGHTS', 22, 126);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Daily Readiness Score:', 22, 137);
+      doc.text('Active Habit Checkpoints:', 22, 145);
+      doc.text('Tracked Habit Streams:', 22, 153);
+      doc.text('Workspace Task Checkoffs:', 22, 161);
+      doc.text('Total Tracked Logs:', 22, 169);
+      doc.text('Operative Grade Tier:', 22, 177);
 
       let grade = "Bronze Operative";
       if (readiness >= 80) grade = "Elite Overlord";
       else if (readiness >= 50) grade = "Silver Guard Operative";
 
-      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
       doc.text(`${readiness}% INDEXED`, 75, 137);
       doc.text(`${streak} Days Checkpoint`, 75, 145);
       doc.text(`${totalHabitsCount} Habits Active`, 75, 153);
       doc.text(`${totalTasksDone} Actions Done`, 75, 161);
       doc.text(`${loggedDays} Active Days`, 75, 169);
-      doc.setTextColor(168, 85, 247); // Purple highlight
+      doc.setTextColor(79, 70, 229); // Indigo text for grade
       doc.text(grade.toUpperCase(), 75, 177);
 
-      // Certificate Seal / Accreditation
-      doc.setDrawColor(244, 63, 94);
+      // Section 3: Certificate Verification Description
+      doc.setDrawColor(226, 232, 240);
       doc.line(15, 208, 195, 208);
 
-      doc.setFontSize(12);
-      doc.setTextColor(255, 255, 255);
-      doc.text('SECURITY VERIFICATION CODE', 15, 222);
-
-      doc.setFontSize(9);
-      doc.setTextColor(148, 163, 184);
-      const description = "This report represents actual daily completions of habit tracking matrices and task items under the LevelUp cyber quest log. Readiness indices are computed directly from daily task completion states and streak checkpoints.";
-      doc.text(doc.splitTextToSize(description, 180), 15, 230);
-
-      // Signatures and Date
+      doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
-      doc.setTextColor(244, 63, 94);
-      doc.text('LEVELUP AI COACH CO-SIGN', 15, 262);
-      doc.text('ACCREDITED PROTOCOLS', 130, 262);
+      doc.setTextColor(15, 23, 42);
+      doc.text('SECURITY ACCREDITATION LOG', 15, 220);
 
-      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
       doc.setTextColor(100, 116, 139);
-      doc.text(`ISSUED: ${new Date().toLocaleDateString()} @ ${new Date().toLocaleTimeString()}`, 15, 268);
-      doc.text('REF: ' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_SYS', 130, 268);
+      const description = "This credential report reflects verified data records containing daily habit routines, streaks, and milestone checkmarks. Completion metrics are tracked locally on-device and compiled with server-side audit logs. All performance statistics are fully certified by LevelUp terminal processes.";
+      doc.text(doc.splitTextToSize(description, 180), 15, 228);
+
+      // Signature Zone
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, 255, 75, 255);
+      doc.line(135, 255, 195, 255);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(71, 85, 105);
+      doc.text('LEVELUP AI COACH CO-SIGN', 15, 260);
+      doc.text('AGENT SIGNATURE & SEAL', 135, 260);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text('REF CODE: ' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_AUTH', 15, 270);
+      doc.text('LEVELUP MASTER TERMINAL OS v2.4', 135, 270);
 
       // Save A4 file
       doc.save(`levelup_stats_report_${user.displayName.toLowerCase()}.pdf`);
