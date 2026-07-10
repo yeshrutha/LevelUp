@@ -9,11 +9,15 @@ dist/
 
 # Environment files
 .env
+.env.*
 .env.local
 .env.development
 .env.production
 .env.staging
 server/.env
+client/.env
+**/.env
+**/.env.*
 
 # Log files
 *.log

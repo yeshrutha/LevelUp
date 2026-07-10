@@ -8,10 +8,19 @@ const getResendInstance = () => {
   return new Resend(apiKey);
 };
 
+const getFromEmail = () => {
+  return process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+};
+
+const getWebsiteUrl = () => {
+  return process.env.WEBSITE_URL || 'http://localhost:5173';
+};
+
 export const EmailService = {
   sendWelcomeEmail: async (toEmail, displayName) => {
     const resend = getResendInstance();
-    const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const from = getFromEmail();
+    const websiteUrl = getWebsiteUrl();
     return await resend.emails.send({
       from,
       to: toEmail,
@@ -20,6 +29,9 @@ export const EmailService = {
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #1e293b; border-radius: 10px; background-color: #030712; color: #f3f4f6;">
           <h2 style="color: #00e5ff; margin-top: 0; text-transform: uppercase; font-family: monospace;">🚀 Welcome to LevelUp, ${displayName}!</h2>
           <p>Your user profile has been generated successfully. Let's LevelUp your skills, complete challenges, track milestones, and conquer your roadmaps.</p>
+          <div style="margin: 25px 0; text-align: center;">
+            <a href="${websiteUrl}" style="background-color: #00e5ff; color: #020617; padding: 12px 24px; border-radius: 6px; font-weight: bold; text-decoration: none; display: inline-block; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">Access Terminal</a>
+          </div>
           <hr style="border-color: #1e293b; margin: 20px 0;" />
           <p style="font-size: 11px; color: #9ca3af; line-height: 1.5;">LevelUp Terminal Sync Systems.</p>
         </div>
@@ -29,7 +41,8 @@ export const EmailService = {
 
   sendVerificationEmail: async (toEmail, code) => {
     const resend = getResendInstance();
-    const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const from = getFromEmail();
+    const websiteUrl = getWebsiteUrl();
     return await resend.emails.send({
       from,
       to: toEmail,
@@ -41,6 +54,9 @@ export const EmailService = {
           <div style="background-color: #0b0f19; border: 1px solid #1e293b; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
             <span style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #00e5ff; font-family: monospace;">${code}</span>
           </div>
+          <div style="margin: 20px 0; text-align: center;">
+            <a href="${websiteUrl}/#settings" style="color: #00e5ff; font-family: monospace; text-decoration: underline; font-size: 13px;">Return to Settings Portal</a>
+          </div>
           <p style="font-size: 11px; color: #9ca3af; line-height: 1.5;">This code expires in 15 minutes. If you did not request this, you can ignore this message.</p>
         </div>
       `
@@ -49,7 +65,8 @@ export const EmailService = {
 
   sendPasswordResetEmail: async (toEmail, code) => {
     const resend = getResendInstance();
-    const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const from = getFromEmail();
+    const websiteUrl = getWebsiteUrl();
     return await resend.emails.send({
       from,
       to: toEmail,
@@ -61,6 +78,9 @@ export const EmailService = {
           <div style="background-color: #0b0f19; border: 1px solid #1e293b; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
             <span style="font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #00e5ff; font-family: monospace;">${code}</span>
           </div>
+          <div style="margin: 20px 0; text-align: center;">
+            <a href="${websiteUrl}" style="color: #00e5ff; font-family: monospace; text-decoration: underline; font-size: 13px;">Return to Authentication Terminal</a>
+          </div>
           <p style="font-size: 11px; color: #9ca3af; line-height: 1.5;">This code is active for 15 minutes. If you did not make this request, update your security credentials immediately.</p>
         </div>
       `
@@ -69,7 +89,8 @@ export const EmailService = {
 
   sendDailyTaskReminder: async (toEmail, displayName, tasks = []) => {
     const resend = getResendInstance();
-    const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const from = getFromEmail();
+    const websiteUrl = getWebsiteUrl();
     
     let taskListHtml = '';
     if (tasks.length > 0) {
@@ -91,7 +112,10 @@ export const EmailService = {
           <div style="background-color: #0b0f19; border: 1px solid #1e293b; padding: 20px; border-radius: 8px; margin: 20px 0;">
             ${taskListHtml}
           </div>
-          <p style="text-align: center;">Complete these tasks in your dashboard to earn XP and increase your readiness score!</p>
+          <div style="margin: 25px 0; text-align: center;">
+            <a href="${websiteUrl}" style="background-color: #00e5ff; color: #020617; padding: 10px 20px; border-radius: 6px; font-weight: bold; text-decoration: none; display: inline-block; font-family: monospace; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Update Dashboard Checklist</a>
+          </div>
+          <p style="text-align: center; font-size: 12px; color: #9ca3af;">Complete these tasks in your dashboard to earn XP and increase your readiness score!</p>
         </div>
       `
     });
@@ -99,7 +123,8 @@ export const EmailService = {
 
   sendWeeklyProgressReport: async (toEmail, displayName, progressStats) => {
     const resend = getResendInstance();
-    const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const from = getFromEmail();
+    const websiteUrl = getWebsiteUrl();
     
     const { xpEarned = 0, tasksCompleted = 0, habitsMaintained = 0, readinessDelta = 0 } = progressStats;
 
@@ -117,6 +142,9 @@ export const EmailService = {
             <div>🔥 <strong>Streak Level:</strong> ${habitsMaintained} days active</div>
             <div>⚡️ <strong>Readiness Variance:</strong> ${readinessDelta >= 0 ? '+' : ''}${readinessDelta}% delta</div>
           </div>
+          <div style="margin: 25px 0; text-align: center;">
+            <a href="${websiteUrl}" style="background-color: #00e5ff; color: #020617; padding: 10px 20px; border-radius: 6px; font-weight: bold; text-decoration: none; display: inline-block; font-family: monospace; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Go to Dashboard</a>
+          </div>
           <p style="text-align: center;">Keep pushing forward. Consistency is the key to mastering your domains!</p>
         </div>
       `
@@ -125,7 +153,8 @@ export const EmailService = {
 
   sendAchievementNotification: async (toEmail, displayName, achievementName, xpReward) => {
     const resend = getResendInstance();
-    const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+    const from = getFromEmail();
+    const websiteUrl = getWebsiteUrl();
     return await resend.emails.send({
       from,
       to: toEmail,
@@ -137,6 +166,9 @@ export const EmailService = {
           <div style="background-color: #0b0f19; border: 1px dashed #ffd700; padding: 25px; border-radius: 8px; margin: 20px 0;">
             <span style="font-size: 20px; font-weight: bold; color: #ffd700; display: block; margin-bottom: 5px;">${achievementName}</span>
             <span style="font-size: 12px; color: #9ca3af;">Bonus Reward: +${xpReward} XP has been credited.</span>
+          </div>
+          <div style="margin: 20px 0;">
+            <a href="${websiteUrl}" style="color: #ffd700; font-family: monospace; text-decoration: underline; font-size: 13px;">View Achievements Catalog</a>
           </div>
           <p>Visit your achievement catalog inside LevelUp to view unlocked badges.</p>
         </div>

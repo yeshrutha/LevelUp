@@ -5,8 +5,30 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import admin from 'firebase-admin';
 
 dotenv.config();
+
+// Firebase Admin Initialization
+const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+if (serviceAccountVar) {
+  try {
+    let serviceAccount;
+    if (serviceAccountVar.trim().startsWith('{')) {
+      serviceAccount = JSON.parse(serviceAccountVar);
+    } else {
+      const fileContent = fs.readFileSync(serviceAccountVar, 'utf8');
+      serviceAccount = JSON.parse(fileContent);
+    }
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log('🔥 Firebase Admin successfully initialized.');
+  } catch (err) {
+    console.error('❌ Firebase Admin: Failed to initialize:', err.message);
+  }
+}
 
 import { EmailService } from './emailService.js';
 
@@ -786,47 +808,80 @@ app.post('/api/auth/verify-email-code', authRateLimiter, async (req, res) => {
   }
 });
 
-// --- Google Gemini AI Assistant Integration ---
-const callGemini = async (systemInstruction, userPrompt, jsonMode = false) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured in your .env file.');
-  }
+// --- AI Assistant Integration (NVIDIA AI with Gemini Fallback) ---
+const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
+  const nvidiaKey = process.env.NVIDIA_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
 
-  const model = "gemini-3.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: userPrompt }]
-        }
-      ],
-      systemInstruction: {
-        parts: [{ text: systemInstruction }]
+  if (nvidiaKey) {
+    const url = 'https://integrate.api.nvidia.com/v1/chat/completions';
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${nvidiaKey}`
       },
-      generationConfig: jsonMode ? {
-        responseMimeType: 'application/json'
-      } : undefined
-    })
-  });
+      body: JSON.stringify({
+        model: 'meta/llama-3.1-70b-instruct',
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: jsonMode ? { type: 'json_object' } : undefined
+      })
+    });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Gemini API Response: ${response.status} - ${errText}`);
-  }
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`NVIDIA AI API Response: ${response.status} - ${errText}`);
+    }
 
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) {
-    throw new Error('Received empty response payload from Gemini API.');
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) {
+      throw new Error('Empty response content received from NVIDIA AI.');
+    }
+    return text;
+  } else if (geminiKey) {
+    const model = "gemini-3.5-flash";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: userPrompt }]
+          }
+        ],
+        systemInstruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        generationConfig: jsonMode ? {
+          responseMimeType: 'application/json'
+        } : undefined
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Gemini API Response: ${response.status} - ${errText}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error('Received empty response payload from Gemini API.');
+    }
+    return text;
+  } else {
+    throw new Error('AI Provider Configuration Error: Neither NVIDIA_API_KEY nor GEMINI_API_KEY is configured in your .env file.');
   }
-  return text;
 };
+
+const callGemini = callAI;
 
 // AI Coach Response Generator Endpoint
 app.post('/api/ai/coach', async (req, res) => {
