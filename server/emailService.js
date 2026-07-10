@@ -173,6 +173,7 @@ export const EmailService = {
           <p>Visit your achievement catalog inside LevelUp to view unlocked badges.</p>
         </div>
       `
+    });
   },
 
   sendSupportTicketConfirmation: async (toEmail, displayName, message) => {
