@@ -4,7 +4,7 @@ import { Settings as SettingsIcon, Sun, Moon, User, Mail, Phone, ShieldCheck, Al
 import { motion } from 'framer-motion';
 
 export const Settings = () => {
-  const { user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, setCurrentTab, triggerToast, setNotifications } = useApp();
+  const { user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, setCurrentTab, triggerToast, setNotifications, sendVerificationCode, verifyEmailCode } = useApp();
 
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
@@ -12,7 +12,6 @@ export const Settings = () => {
 
   // Email Verification State
   const [emailVerifying, setEmailVerifying] = useState(false);
-  const [emailVerifiedCode, setEmailVerifiedCode] = useState('');
   const [emailEnteredCode, setEmailEnteredCode] = useState('');
 
   // Phone Verification State
@@ -20,45 +19,25 @@ export const Settings = () => {
   const [phoneVerifiedCode, setPhoneVerifiedCode] = useState('');
   const [phoneEnteredCode, setPhoneEnteredCode] = useState('');
 
-  const sendEmailCode = () => {
+  const sendEmailCode = async () => {
     if (!editEmail.trim()) {
       triggerToast('Validation Error', 'Please enter a valid email address first.', 'warning');
       return;
     }
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setEmailVerifiedCode(code);
     setEmailVerifying(true);
-
-    // Push verification code to system notification center
-    const newNotif = {
-      id: `notif_${Math.random()}`,
-      title: 'Email Security Alert',
-      body: `Verification Code: ${code}. Enter this code on settings to verify your email.`,
-      type: 'system',
-      read: false,
-      time: 'Just now'
-    };
-    setNotifications(old => [newNotif, ...old]);
-
-    triggerToast('Verification Code Sent', `OTP code sent to email: ${code}`, 'success');
+    const res = await sendVerificationCode();
+    if (!res.success) {
+      triggerToast('Verification Failed', res.error, 'error');
+      setEmailVerifying(false);
+    }
   };
 
-  const confirmEmailCode = () => {
-    if (emailEnteredCode.trim() === emailVerifiedCode) {
-      setUser(prev => {
-        const nextUser = {
-          ...prev,
-          email: editEmail.trim(),
-          emailVerified: true
-        };
-        localStorage.setItem('levelup_user', JSON.stringify(nextUser));
-        return nextUser;
-      });
+  const confirmEmailCode = async () => {
+    if (!emailEnteredCode.trim()) return;
+    const res = await verifyEmailCode(emailEnteredCode.trim());
+    if (res.success) {
       setEmailVerifying(false);
       setEmailEnteredCode('');
-      triggerToast('Email Verified', 'Your email address has been verified successfully!', 'success');
-    } else {
-      triggerToast('Verification Failed', 'Invalid verification code. Please try again!', 'error');
     }
   };
 

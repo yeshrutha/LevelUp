@@ -127,12 +127,23 @@ let localDB = {};
 const createUserProfile = (email, name = '') => ({
   displayName: name || email.split('@')[0],
   email,
-  avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Jack',
+  avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=' + encodeURIComponent(name || email.split('@')[0]),
   xp: 0,
   level: 1,
   rank: 'Iron I',
   streak: 0,
-  readiness: 0
+  readiness: 0,
+  createdDate: new Date().toISOString(),
+  themeMode: 'light',
+  isMuted: false,
+  unlockedAchievements: [],
+  emailVerified: false,
+  phoneVerified: false,
+  phoneNumber: '',
+  tasks: [],
+  roadmaps: [],
+  habits: {},
+  achievements: []
 });
 
 const getOrInitUser = (email, name = '') => {
@@ -177,6 +188,10 @@ const UserDataSchema = new mongoose.Schema({
   customPages: { type: Array, default: [] },
   calendar: { type: Array, default: [] },
   goal: { type: Object, default: {} },
+  verificationCode: { type: String },
+  verificationExpires: { type: Date },
+  resetCode: { type: String },
+  resetExpires: { type: Date },
   updatedAt: { type: Date, default: Date.now }
 });
 
@@ -529,6 +544,273 @@ app.post('/api/auth/login', async (req, res) => {
     const token = createToken(existing);
     sendLoginEmail(normalizedEmail, existing.profile?.displayName || existing.displayName || normalizedEmail.split('@')[0]);
     return res.json({ token, ...buildUserPayload(existing) });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Rate limiting state & middleware
+const authRateLimit = {};
+const authRateLimiter = (req, res, next) => {
+  const ip = req.ip;
+  const now = Date.now();
+  if (!authRateLimit[ip]) {
+    authRateLimit[ip] = [];
+  }
+  authRateLimit[ip] = authRateLimit[ip].filter(timestamp => now - timestamp < 60000);
+  if (authRateLimit[ip].length >= 10) { // Max 10 attempts per minute
+    return res.status(429).json({ error: 'Too many requests. Please try again in a minute.' });
+  }
+  authRateLimit[ip].push(now);
+  next();
+};
+
+// POST Google OAuth Fallback
+app.post('/api/auth/google', authRateLimiter, async (req, res) => {
+  const { email, displayName, avatar } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required for Google authentication.' });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  try {
+    if (isConnectedToMongo) {
+      let existing = await UserData.findOne({ email: normalizedEmail });
+      if (!existing) {
+        const profile = createUserProfile(normalizedEmail, displayName || normalizedEmail.split('@')[0]);
+        if (avatar) profile.avatar = avatar;
+        profile.emailVerified = true; // Google accounts are pre-verified
+
+        existing = await UserData.create({
+          email: normalizedEmail,
+          profile,
+          habitList: [],
+          customPages: [],
+          calendar: [],
+          goal: { title: '', targetDate: '' }
+        });
+      } else {
+        // Ensure emailVerified is true
+        if (!existing.profile) existing.profile = {};
+        existing.profile.emailVerified = true;
+        existing.markModified('profile');
+        await existing.save();
+      }
+
+      const token = createToken(existing);
+      return res.json({ token, ...buildUserPayload(existing) });
+    }
+
+    // LocalDB Fallback
+    let existing = localDB[normalizedEmail];
+    if (!existing) {
+      existing = getOrInitUser(normalizedEmail, displayName || normalizedEmail.split('@')[0]);
+      if (avatar) existing.profile.avatar = avatar;
+    }
+    existing.profile.emailVerified = true;
+    const token = createToken(existing);
+    return res.json({ token, ...buildUserPayload(existing) });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST Forgot Password
+app.post('/api/auth/forgot-password', authRateLimiter, async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email address is required.' });
+  }
+  const normalizedEmail = email.toLowerCase().trim();
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+  try {
+    let userExist = false;
+    if (isConnectedToMongo) {
+      const user = await UserData.findOne({ email: normalizedEmail });
+      if (user) {
+        user.resetCode = code;
+        user.resetExpires = expires;
+        await user.save();
+        userExist = true;
+      }
+    } else {
+      const user = localDB[normalizedEmail];
+      if (user) {
+        user.resetCode = code;
+        user.resetExpires = expires;
+        userExist = true;
+      }
+    }
+
+    if (!userExist) {
+      return res.status(404).json({ error: 'No account registered with this email address.' });
+    }
+
+    // Send email via mailer
+    const activeTransporter = await getTransporter();
+    if (activeTransporter) {
+      const mailOptions = {
+        from: `"${process.env.SMTP_FROM_NAME || 'LevelUp OS'}" <${process.env.SMTP_USER || 'no-reply@levelup.io'}>`,
+        to: normalizedEmail,
+        subject: '🔑 LevelUp Security: Password Reset Request',
+        html: `
+          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #1e293b; border-radius: 10px; background-color: #030712; color: #f3f4f6;">
+            <h2 style="color: #00e5ff; margin-top: 0; text-transform: uppercase; font-family: monospace;">🔑 Reset Verification Code</h2>
+            <p>Hello,</p>
+            <p>Use the authorization code below to configure a new password for your LevelUp account:</p>
+            <div style="background-color: #0b0f19; border: 1px solid #1e293b; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+              <span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #00e5ff; font-family: monospace;">${code}</span>
+            </div>
+            <p style="font-size: 11px; color: #9ca3af; line-height: 1.5;">This security code is active for 15 minutes. If you did not initiate this change, please contact system support.</p>
+          </div>
+        `
+      };
+      const info = await activeTransporter.sendMail(mailOptions);
+      console.log(`🔑 Reset code sent to: ${normalizedEmail}. Message ID: ${info.messageId}`);
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      if (previewUrl) console.log(`🔑 Ethereal Email Preview: ${previewUrl}`);
+    }
+
+    return res.json({ success: true, message: 'Reset code dispatched successfully.' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST Reset Password
+app.post('/api/auth/reset-password', authRateLimiter, async (req, res) => {
+  const { email, code, newPassword } = req.body;
+  if (!email || !code || !newPassword || newPassword.length < 8) {
+    return res.status(400).json({ error: 'All fields are required. Passwords must be at least 8 characters long.' });
+  }
+  const normalizedEmail = email.toLowerCase().trim();
+
+  try {
+    let user = null;
+    if (isConnectedToMongo) {
+      user = await UserData.findOne({ email: normalizedEmail });
+    } else {
+      user = localDB[normalizedEmail];
+    }
+
+    if (!user || user.resetCode !== code || new Date() > new Date(user.resetExpires)) {
+      return res.status(400).json({ error: 'Invalid or expired password reset verification code.' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    user.passwordHash = passwordHash;
+    user.resetCode = undefined;
+    user.resetExpires = undefined;
+
+    if (isConnectedToMongo) {
+      await user.save();
+    }
+
+    return res.json({ success: true, message: 'Password has been updated successfully.' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST Send Verification Email
+app.post('/api/auth/send-verification', authRateLimiter, async (req, res) => {
+  const { email } = req.body;
+  const targetEmail = (email || '').toLowerCase().trim();
+  if (!targetEmail) {
+    return res.status(400).json({ error: 'Email address is required.' });
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+  try {
+    let userExist = false;
+    if (isConnectedToMongo) {
+      const user = await UserData.findOne({ email: targetEmail });
+      if (user) {
+        user.verificationCode = code;
+        user.verificationExpires = expires;
+        await user.save();
+        userExist = true;
+      }
+    } else {
+      const user = localDB[targetEmail];
+      if (user) {
+        user.verificationCode = code;
+        user.verificationExpires = expires;
+        userExist = true;
+      }
+    }
+
+    if (!userExist) {
+      return res.status(404).json({ error: 'Account not found.' });
+    }
+
+    // Send email via mailer
+    const activeTransporter = await getTransporter();
+    if (activeTransporter) {
+      const mailOptions = {
+        from: `"${process.env.SMTP_FROM_NAME || 'LevelUp OS'}" <${process.env.SMTP_USER || 'no-reply@levelup.io'}>`,
+        to: targetEmail,
+        subject: '✉️ LevelUp Verification: Verify Your Email Address',
+        html: `
+          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #1e293b; border-radius: 10px; background-color: #030712; color: #f3f4f6;">
+            <h2 style="color: #00e5ff; margin-top: 0; text-transform: uppercase; font-family: monospace;">✉️ Verify Email Address</h2>
+            <p>Hello,</p>
+            <p>Welcome to LevelUp! Confirm your email address using the registration code below:</p>
+            <div style="background-color: #0b0f19; border: 1px solid #1e293b; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+              <span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #00e5ff; font-family: monospace;">${code}</span>
+            </div>
+            <p style="font-size: 11px; color: #9ca3af; line-height: 1.5;">This registration code is active for 15 minutes. If you did not register a LevelUp profile, you can safely disregard this.</p>
+          </div>
+        `
+      };
+      const info = await activeTransporter.sendMail(mailOptions);
+      console.log(`✉️ Verification code sent to: ${targetEmail}. Message ID: ${info.messageId}`);
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      if (previewUrl) console.log(`✉️ Ethereal Email Preview: ${previewUrl}`);
+    }
+
+    return res.json({ success: true, message: 'Verification code sent.', code });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST Verify Email Code
+app.post('/api/auth/verify-email-code', authRateLimiter, async (req, res) => {
+  const { email, code } = req.body;
+  const targetEmail = (email || '').toLowerCase().trim();
+  if (!targetEmail || !code) {
+    return res.status(400).json({ error: 'Email and verification code are required.' });
+  }
+
+  try {
+    let user = null;
+    if (isConnectedToMongo) {
+      user = await UserData.findOne({ email: targetEmail });
+    } else {
+      user = localDB[targetEmail];
+    }
+
+    if (!user || user.verificationCode !== code || new Date() > new Date(user.verificationExpires)) {
+      return res.status(400).json({ error: 'Invalid or expired email verification code.' });
+    }
+
+    user.verificationCode = undefined;
+    user.verificationExpires = undefined;
+    if (!user.profile) user.profile = {};
+    user.profile.emailVerified = true;
+
+    if (isConnectedToMongo) {
+      user.markModified('profile');
+      await user.save();
+    }
+
+    return res.json({ success: true, profile: user.profile });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
