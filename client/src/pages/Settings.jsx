@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { 
   User, Shield, Lock, Bell, Palette, Cpu, Mail, Calendar, Database, Link, 
   HelpCircle, AlertOctagon, Terminal, Globe, Clock, Plus, Trash2, Eye, EyeOff, 
-  ShieldCheck, Check, Power, RefreshCw, Activity, Layers, Play, CheckSquare, Sparkles, ChevronDown
+  ShieldCheck, Check, Power, RefreshCw, Activity, Layers, Play, CheckSquare, Sparkles, ChevronDown, Settings as SettingsIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
