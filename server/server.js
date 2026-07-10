@@ -274,11 +274,21 @@ app.get('/api/profile', async (req, res) => {
   }
 });
 
+// Cache for debugging profile syncs
+export const lastProfileSyncs = [];
+
 // POST Profile Sync
 app.post('/api/profile/sync', async (req, res) => {
   try {
+    const profile = req.body;
+    lastProfileSyncs.push({
+      time: new Date().toISOString(),
+      email: req.user?.email,
+      payload: profile
+    });
+    if (lastProfileSyncs.length > 50) lastProfileSyncs.shift();
+
     if (isConnectedToMongo) {
-      const profile = req.body;
       await UserData.updateOne(
         { email: req.user.email },
         { 
@@ -1319,6 +1329,7 @@ app.get('/api/system/diagnostics', async (req, res) => {
       serverTime: now.toISOString(),
       isConnectedToMongo,
       sentRemindersCache,
+      lastProfileSyncs,
       diagnostics
     });
   } catch (err) {
