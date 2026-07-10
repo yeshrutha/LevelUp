@@ -1375,7 +1375,7 @@ export const Settings = () => {
                     <div className="p-4 bg-rose-500/[0.02] border border-rose-500/10 rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-4 text-left">
                       <div>
                         <span className="text-[10px] font-bold text-rose-400 uppercase font-futuristic block">Reset Progress Registry</span>
-                        <span className="text-[9px] text-slate-500 mt-1 block leading-normal">Purges habit checklists, completed task indices, and timelines but preserves your credentials.</span>
+                        <span className="text-[9px] text-slate-500 mt-1 block leading-normal">Deletes habit checklists, completed task indices, and timelines but preserves your credentials.</span>
                       </div>
                       <button
                         onClick={() => handleDangerActionTrigger('reset')}
@@ -1388,20 +1388,20 @@ export const Settings = () => {
                     <div className="p-4 bg-rose-500/[0.02] border border-rose-500/10 rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-4 text-left">
                       <div>
                         <span className="text-[10px] font-bold text-rose-400 uppercase font-futuristic block">Delete All User Data</span>
-                        <span className="text-[9px] text-slate-500 mt-1 block leading-normal">Purges the user's custom page timelines, calendar schedules, and settings registry.</span>
+                        <span className="text-[9px] text-slate-500 mt-1 block leading-normal">Deletes the user's custom page timelines, calendar schedules, and settings registry.</span>
                       </div>
                       <button
                         onClick={() => handleDangerActionTrigger('delete_data')}
                         className="px-4 py-2 border border-rose-500/30 hover:border-rose-500 text-rose-400 font-futuristic font-bold text-[9px] uppercase tracking-widest rounded transition-colors cursor-pointer whitespace-nowrap self-start sm:self-center"
                       >
-                        Purge User Data
+                        Delete User Data
                       </button>
                     </div>
 
                     <div className="p-4 bg-rose-500/[0.04] border border-rose-500/20 rounded-xl flex flex-col sm:flex-row justify-between sm:items-center gap-4 text-left">
                       <div>
                         <span className="text-[10px] font-bold text-rose-500 uppercase font-futuristic block">Delete LevelUp Profile</span>
-                        <span className="text-[9px] text-slate-500 mt-1 block leading-normal">Completely purges your registration, credentials, and settings logs from the MongoDB databases.</span>
+                        <span className="text-[9px] text-slate-500 mt-1 block leading-normal">Completely deletes your registration, credentials, and settings logs from the MongoDB databases.</span>
                       </div>
                       <button
                         onClick={() => handleDangerActionTrigger('delete_account')}
@@ -1532,7 +1532,7 @@ export const Settings = () => {
                   disabled={confirmLoading || !confirmPasswordInput}
                   className="px-4 py-2 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-slate-950 font-futuristic font-bold text-[9px] uppercase tracking-widest rounded shadow hover:shadow-glow-accent cursor-pointer transition-all active:scale-95"
                 >
-                  {confirmLoading ? 'Confirming...' : 'Authorize Purge'}
+                  {confirmLoading ? 'Confirming...' : 'Authorize Delete'}
                 </button>
               </div>
             </motion.div>
