@@ -25,7 +25,8 @@ export const Alerts = () => {
     isMuted,
     setIsMuted,
     triggerToast,
-    setCurrentTab
+    setCurrentTab,
+    playAlertSound
   } = useApp();
 
   const [activeFilter, setActiveFilter] = useState('all');
@@ -54,6 +55,7 @@ export const Alerts = () => {
 
   // Sound Test synthesis callers
   const testSound = (type) => {
+    playAlertSound(type);
     if (type === 'success') {
       triggerToast('Chime Test', 'Ascending success chord played', 'success');
     } else if (type === 'xp') {

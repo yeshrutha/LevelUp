@@ -950,7 +950,8 @@ export const AppProvider = ({ children }) => {
       themeMode, setThemeMode: changeThemeMode,
       toasts, triggerToast,
       isMuted, setIsMuted: changeMuteState,
-      showShareModal, setShowShareModal
+      showShareModal, setShowShareModal,
+      playAlertSound
     }}>
       {children}
     </AppContext.Provider>
