@@ -267,10 +267,6 @@ export const EmailService = {
               </a>
             </div>
           </div>
-          
-          <div style="text-align: center; margin-top: 20px; font-size: 9px; color: #475569; text-transform: uppercase; letter-spacing: 1px;">
-            This alert will snooze and repeat every 5 minutes until complete.
-          </div>
         </div>
       `
     });
