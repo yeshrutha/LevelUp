@@ -151,21 +151,7 @@ export default function AIPlanner() {
               onChange={(e) => setPrompt(e.target.value)}
               rows={12}
               className="w-full bg-slate-950/80 border border-white/10 rounded-lg p-4 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500/50 focus:shadow-glow-accent resize-none placeholder-slate-600 transition-all duration-300"
-              placeholder={`Example:
-Create a personalized schedule for me.
-Name: Yechuu
-Duration: 13 July 2026 - 9 November 2026
-Career Goal: Backend / AI-ML Engineer.
-
-Daily Routine:
-- Wake Up: 6:15 AM
-- Gym: 5:30 PM - 7:30 PM
-- Study Time: 8:00 PM - 10:00 PM
-- Valorant (Maximum 2 Games)
-
-Learning Targets:
-Java, Python, Leetcode, DBMS, Git & GitHub.
-Practice DSA and coding every Wednesday/Thursday.`}
+              placeholder="Describe your targets, routine, and career goals here..."
             />
           </div>
 
