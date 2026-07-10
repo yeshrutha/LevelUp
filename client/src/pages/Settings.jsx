@@ -68,9 +68,7 @@ export const Settings = () => {
   const [weekStartsOn, setWeekStartsOn] = useState(settings.weekStartsOn || 'Monday');
   const [defaultLandingPage, setDefaultLandingPage] = useState(settings.defaultLandingPage || 'Dashboard');
 
-  // Developer mode
-  const [devMode, setDevMode] = useState(settings.devModeEnabled === true);
-  const [apiLatency, setApiLatency] = useState(42);
+
 
   // Integrations states
   const [integrations, setIntegrations] = useState(settings.integrations || {
@@ -118,14 +116,7 @@ export const Settings = () => {
     setSupportLoading(false);
   };
 
-  // Fluctuate dev latency counter slightly
-  useEffect(() => {
-    if (!devMode) return;
-    const interval = setInterval(() => {
-      setApiLatency(prev => Math.max(10, Math.min(120, prev + Math.floor(Math.random() * 9) - 4)));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [devMode]);
+
 
   // Sync theme config
   const handleThemeToggle = (mode) => {
@@ -355,24 +346,6 @@ export const Settings = () => {
           <p className="text-[10px] text-slate-500 uppercase mt-1 tracking-wider">
             Configure system configurations, custom layouts, notifications, and telemetry sync registries.
           </p>
-        </div>
-        
-        {/* Quick developer mode toggle */}
-        <div className="flex items-center gap-3 bg-slate-950 px-4 py-2 rounded-xl border border-white/5 self-start">
-          <Terminal size={12} className="text-accent" />
-          <span className="text-[10px] font-bold font-futuristic text-slate-400 uppercase tracking-wider">Developer Console</span>
-          <button
-            onClick={() => {
-              const nextVal = !devMode;
-              setDevMode(nextVal);
-              handleSaveSettings({ devModeEnabled: nextVal });
-            }}
-            className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
-              devMode ? 'bg-primary justify-end shadow-glow-accent' : 'bg-slate-800 justify-start'
-            }`}
-          >
-            <motion.div layout className="w-4 h-4 rounded-full bg-white shadow-md" />
-          </button>
         </div>
       </div>
 
@@ -1337,62 +1310,7 @@ export const Settings = () => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Developer console panel */}
-          <AnimatePresence>
-            {devMode && (
-              <motion.div
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 15 }}
-                className="mt-6 glass-panel p-5 rounded-2xl border-white/10 bg-slate-950/60 shadow-xl space-y-4"
-              >
-                <div className="flex items-center gap-2 text-accent border-b border-white/5 pb-2">
-                  <Terminal size={14} />
-                  <span className="text-[10px] font-bold font-futuristic uppercase tracking-widest">Active Developer Metrics</span>
-                </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left font-mono">
-                  <div className="p-3 bg-slate-900/40 border border-white/5 rounded-xl">
-                    <span className="text-[8px] text-slate-500 uppercase block">Backend Status</span>
-                    <span className="text-[10px] font-bold text-emerald-400 mt-1 block">ONLINE (200 OK)</span>
-                  </div>
-
-                  <div className="p-3 bg-slate-900/40 border border-white/5 rounded-xl">
-                    <span className="text-[8px] text-slate-500 uppercase block">Database (Mongo)</span>
-                    <span className="text-[10px] font-bold text-emerald-400 mt-1 block">CONNECTED</span>
-                  </div>
-
-                  <div className="p-3 bg-slate-900/40 border border-white/5 rounded-xl">
-                    <span className="text-[8px] text-slate-500 uppercase block">Resend Mailer</span>
-                    <span className="text-[10px] font-bold text-emerald-400 mt-1 block">SMTP DISPATCH ACTIVE</span>
-                  </div>
-
-                  <div className="p-3 bg-slate-900/40 border border-white/5 rounded-xl">
-                    <span className="text-[8px] text-slate-500 uppercase block">API Latency</span>
-                    <span className="text-[10px] font-bold text-accent mt-1 block flex items-center gap-1.5">
-                      <Activity size={10} className="animate-pulse" /> {apiLatency}ms
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-left font-mono">
-                  <div className="p-3 bg-slate-900/40 border border-white/5 rounded-xl">
-                    <span className="text-[8px] text-slate-500 uppercase block">Active AI Models</span>
-                    <span className="text-[10px] font-bold text-white mt-1 block uppercase tracking-wider">
-                      {user?.settings?.aiProvider || 'Gemini'} Flash NIM
-                    </span>
-                  </div>
-
-                  <div className="p-3 bg-slate-900/40 border border-white/5 rounded-xl">
-                    <span className="text-[8px] text-slate-500 uppercase block">Telemetry Environment</span>
-                    <span className="text-[10px] font-bold text-amber-500 mt-1 block uppercase tracking-wider">
-                      development
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 
