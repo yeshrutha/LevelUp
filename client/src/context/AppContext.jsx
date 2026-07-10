@@ -191,40 +191,79 @@ export const AppProvider = ({ children }) => {
         ctx.resume();
       }
 
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
       const now = ctx.currentTime;
       
       if (type === 'success') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(587.33, now); // D5
-        osc.frequency.setValueAtTime(880, now + 0.08); // A5
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
-        osc.start(now);
-        osc.stop(now + 0.25);
+        // Bright Dual-Tone Echo ("Ding-ding!")
+        const playTone = (freq, delay, vol, duration) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + delay);
+          
+          gain.gain.setValueAtTime(0, now + delay);
+          gain.gain.linearRampToValueAtTime(vol, now + delay + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + duration);
+          
+          osc.start(now + delay);
+          osc.stop(now + delay + duration);
+        };
+        
+        playTone(523.25, 0, 0.15, 0.4); // C5
+        playTone(659.25, 0.08, 0.15, 0.4); // E5
       } else if (type === 'xp') {
+        // Cyberpunk Upward Sweeper ("Swoosh/Riser")
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.06); // E5
-        osc.frequency.setValueAtTime(783.99, now + 0.12); // G5
-        gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
-        osc.start(now);
-        osc.stop(now + 0.28);
-      } else if (type === 'rank' || type === 'trophy') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(440, now); // A4
-        osc.frequency.setValueAtTime(554.37, now + 0.08); // C#5
-        osc.frequency.setValueAtTime(659.25, now + 0.16); // E5
-        osc.frequency.setValueAtTime(880, now + 0.24); // A5
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(900, now + 0.35);
+        
         gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+        
         osc.start(now);
-        osc.stop(now + 0.45);
+        osc.stop(now + 0.4);
+      } else if (type === 'rank' || type === 'trophy') {
+        // Lush Multi-Oscillator Triumph Fanfare (ring out together)
+        const playFanfareNote = (freq, delay, vol, duration) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, now + delay);
+          
+          // Add a tiny bit of vibrato for vintage feel
+          const lfo = ctx.createOscillator();
+          const lfoGain = ctx.createGain();
+          lfo.frequency.value = 8; // 8Hz
+          lfoGain.gain.value = 5; // Pitch variation
+          lfo.connect(lfoGain);
+          lfoGain.connect(osc.frequency);
+          
+          gain.gain.setValueAtTime(0, now + delay);
+          gain.gain.linearRampToValueAtTime(vol, now + delay + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + duration);
+          
+          lfo.start(now + delay);
+          osc.start(now + delay);
+          
+          lfo.stop(now + delay + duration);
+          osc.stop(now + delay + duration);
+        };
+        
+        playFanfareNote(261.63, 0, 0.08, 0.9); // C4
+        playFanfareNote(329.63, 0.12, 0.08, 0.85); // E4
+        playFanfareNote(392.00, 0.24, 0.08, 0.8); // G4
+        playFanfareNote(523.25, 0.36, 0.1, 0.8); // C5
       }
     } catch (e) {
       console.warn('Web Audio playback failed:', e.message);
