@@ -83,6 +83,52 @@ export const Settings = () => {
   const [showDiscordInput, setShowDiscordInput] = useState(false);
   const [showSlackInput, setShowSlackInput] = useState(false);
 
+  const getDeviceDetails = () => {
+    const ua = navigator.userAgent;
+    let browser = "Browser";
+    let os = "OS";
+
+    if (ua.indexOf("Chrome") > -1 && ua.indexOf("Edge") === -1) browser = "Chrome";
+    else if (ua.indexOf("Safari") > -1 && ua.indexOf("Chrome") === -1) browser = "Safari";
+    else if (ua.indexOf("Firefox") > -1) browser = "Firefox";
+    else if (ua.indexOf("Edge") > -1) browser = "Edge";
+
+    if (ua.indexOf("Windows") > -1) os = "Windows";
+    else if (ua.indexOf("Macintosh") > -1) os = "macOS";
+    else if (ua.indexOf("Linux") > -1) os = "Linux";
+    else if (ua.indexOf("Android") > -1) os = "Android";
+    else if (ua.indexOf("like Mac") > -1) os = "iOS";
+
+    return `${browser} / ${os}`;
+  };
+
+  const [sessionDetails, setSessionDetails] = useState({
+    device: getDeviceDetails(),
+    ip: '127.0.0.1',
+    location: 'Local Workspace'
+  });
+
+  useEffect(() => {
+    let active = true;
+    const fetchIP = async () => {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        if (res.ok && active) {
+          const data = await res.json();
+          setSessionDetails({
+            device: getDeviceDetails(),
+            ip: data.ip || '127.0.0.1',
+            location: data.city ? `${data.city}, ${data.country_name}` : 'Local Workspace'
+          });
+        }
+      } catch (e) {
+        // Fallback
+      }
+    };
+    fetchIP();
+    return () => { active = false; };
+  }, []);
+
   const saveWebhookUrl = (service) => {
     const url = service === 'discord' ? discordUrlInput : slackUrlInput;
     if (!url.trim()) return;
@@ -673,18 +719,10 @@ export const Settings = () => {
                     <div className="space-y-2">
                       <div className="p-3 bg-slate-950/40 rounded-xl border border-white/5 flex items-center justify-between text-left">
                         <div>
-                          <div className="text-[10px] font-bold text-white uppercase font-mono">Chrome 126 / Windows 11 (Current Session)</div>
-                          <div className="text-[8px] text-slate-500 mt-1 uppercase tracking-wider">Location: Mumbai, India • IP: 103.88.22.14</div>
+                          <div className="text-[10px] font-bold text-white uppercase font-mono">{sessionDetails.device} (Current Session)</div>
+                          <div className="text-[8px] text-slate-500 mt-1 uppercase tracking-wider">Location: {sessionDetails.location} • IP: {sessionDetails.ip}</div>
                         </div>
                         <span className="text-[8px] font-bold text-emerald-400 uppercase bg-emerald-500/10 border border-emerald-400/20 px-2 py-0.5 rounded">Active</span>
-                      </div>
-
-                      <div className="p-3 bg-slate-950/40 rounded-xl border border-white/5 flex items-center justify-between text-left opacity-60">
-                        <div>
-                          <div className="text-[10px] font-bold text-white uppercase font-mono">Safari 17 / iOS 17.5</div>
-                          <div className="text-[8px] text-slate-500 mt-1 uppercase tracking-wider">Location: Pune, India • IP: 49.36.108.92</div>
-                        </div>
-                        <span className="text-[8px] font-bold text-slate-400 uppercase bg-slate-800 border border-white/10 px-2 py-0.5 rounded">2h ago</span>
                       </div>
                     </div>
                   </div>
