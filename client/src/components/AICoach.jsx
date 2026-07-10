@@ -53,7 +53,7 @@ export const AICoach = () => {
 
     // Call Local Backend or use fallback simulated coach response
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/ai/coach`, {
+      const response = await fetch(`${API_BASE_URL}/api/ai/coach`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CUTE_AVATARS, AvatarRenderer } from '../components/AvatarRenderer';
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 export const Settings = () => {
   const { 
     user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, 
@@ -136,7 +136,7 @@ export const Settings = () => {
     if (!supportMsg.trim()) return;
     setSupportLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/support/ticket', {
+      const res = await fetch(`${API_BASE_URL}/api/support/ticket`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -253,7 +253,7 @@ export const Settings = () => {
         return;
       }
       
-      const res = await fetch('http://localhost:5000/api/auth/reset-password', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email, code: 'N/A', newPassword, skipCodeCheck: true })
@@ -325,7 +325,7 @@ export const Settings = () => {
         triggerToast('Telemetry Cleared', 'All tasks, habits, and timeline custom pages have been deleted.', 'success');
       } else if (confirmAction === 'delete_account') {
         try {
-          await fetch('http://localhost:5000/api/system/reset-db', {
+          await fetch(`${API_BASE_URL}/api/system/reset-db`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
           });

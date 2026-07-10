@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Sparkles, Brain, Loader2, CheckCircle, Calendar, List, AlertCircle, Play, ArrowRight, Check } from 'lucide-react';
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 export default function AIPlanner() {
   const { 
     user, 
@@ -52,7 +52,7 @@ export default function AIPlanner() {
     setResult(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/ai/planner`, {
+      const response = await fetch(`${API_BASE_URL}/api/ai/planner`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt })

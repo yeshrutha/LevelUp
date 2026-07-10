@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Sparkles, Trash2, Calendar, CheckSquare, ListTodo, Sliders, Play, AlertCircle, Bot, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 export const NotionPage = ({ pageId }) => {
   const { customPages, updateCustomPage, deleteCustomPage, togglePageTask, setCurrentTab } = useApp();
   
@@ -43,7 +43,7 @@ export const NotionPage = ({ pageId }) => {
     setAiLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/ai/notion`, {
+      const response = await fetch(`${API_BASE_URL}/api/ai/notion`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: aiPrompt, termDays: page.termDays })

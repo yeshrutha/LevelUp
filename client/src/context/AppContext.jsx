@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AppContext = createContext();
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
 // Ranks List in order
 export const RANKS = [
   'Iron I', 'Iron II', 'Iron III',
@@ -289,7 +291,7 @@ export const AppProvider = ({ children }) => {
   const sendIntegrationNotification = async (title, body, event = 'info') => {
     if (!user || !user.email) return;
     try {
-      await fetch('http://localhost:5000/api/integrations/notify', {
+      await fetch(`${API_BASE_URL}/api/integrations/notify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -314,7 +316,7 @@ export const AppProvider = ({ children }) => {
     };
     
     try {
-      const res = await fetch(`http://localhost:5000${path}`, {
+      const res = await fetch(`${API_BASE_URL}${path}`, {
         ...options,
         headers
       });
@@ -406,7 +408,7 @@ export const AppProvider = ({ children }) => {
       : { email: emailKey, password };
 
     try {
-      const res = await fetch(`http://localhost:5000${endpoint}`, {
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -451,7 +453,7 @@ export const AppProvider = ({ children }) => {
   // Verification-First Authentication Helpers
   const initiateVerify = async (email) => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/initiate-verify', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/initiate-verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -464,7 +466,7 @@ export const AppProvider = ({ children }) => {
 
   const confirmVerify = async (email, code) => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/confirm-verify', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/confirm-verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code })
@@ -477,7 +479,7 @@ export const AppProvider = ({ children }) => {
 
   const setPasswordAndRegister = async (email, password, rememberMe = true) => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/set-password', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/set-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -494,7 +496,7 @@ export const AppProvider = ({ children }) => {
 
   const loginWithPassword = async (email, password, rememberMe = true) => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/password-login', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/password-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -537,7 +539,7 @@ export const AppProvider = ({ children }) => {
 
   const loginWithGoogle = async (email, displayName, avatar, rememberMe) => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/google', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, displayName, avatar })
@@ -573,7 +575,7 @@ export const AppProvider = ({ children }) => {
 
   const forgotPassword = async (email) => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/forgot-password', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -589,7 +591,7 @@ export const AppProvider = ({ children }) => {
 
   const resetPassword = async (email, code, newPassword) => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/reset-password', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code, newPassword })
@@ -606,7 +608,7 @@ export const AppProvider = ({ children }) => {
   const sendVerificationCode = async () => {
     if (!user || !user.email) return { success: false, error: 'No active user found.' };
     try {
-      const res = await fetch('http://localhost:5000/api/auth/send-verification', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/send-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email })
@@ -637,7 +639,7 @@ export const AppProvider = ({ children }) => {
   const verifyEmailCode = async (code) => {
     if (!user || !user.email) return { success: false, error: 'No active user found.' };
     try {
-      const res = await fetch('http://localhost:5000/api/auth/verify-email-code', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/verify-email-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email, code })
@@ -660,7 +662,7 @@ export const AppProvider = ({ children }) => {
   const verifyPassword = async (password) => {
     if (!user || !user.email) return { success: false, error: 'No active user session.' };
     try {
-      const res = await fetch('http://localhost:5000/api/auth/verify-password', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/verify-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email, password })
@@ -710,7 +712,7 @@ export const AppProvider = ({ children }) => {
     localStorage.clear();
 
     try {
-      await fetch('http://localhost:5000/api/system/reset-db', {
+      await fetch(`${API_BASE_URL}/api/system/reset-db`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
