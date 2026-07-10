@@ -280,7 +280,7 @@ export const Login = () => {
                   />
                 </div>
                 
-                {devOtp && (
+                {devOtp && import.meta.env.DEV && (
                   <div className="pt-1.5 text-[8px] font-mono text-cyan-400 uppercase tracking-wider text-left bg-slate-950/40 p-1.5 rounded border border-cyan-500/10">
                     [⚡ Developer OTP Bypass: {devOtp}]
                   </div>
