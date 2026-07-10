@@ -750,7 +750,6 @@ export const Settings = () => {
                         type="button"
                         onClick={() => {
                           setIsMuted(prev => !prev);
-                          triggerToast('Audio Settings', !isMuted ? 'Notification sounds muted' : 'Audio alerts active', 'success');
                         }}
                         className={`p-1.5 rounded border transition-all cursor-pointer flex items-center justify-center ${
                           isMuted 
@@ -825,8 +824,7 @@ export const Settings = () => {
                         <div
                           key={sound.id}
                           onClick={() => {
-                            playAlertSound(sound.id, true);
-                            triggerToast(sound.label, 'Audio frequency chime synthesized.', 'success');
+                            playAlertSound(sound.id);
                           }}
                           className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 hover:bg-slate-900 border border-white/5 cursor-pointer"
                         >
