@@ -8,6 +8,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+import { EmailService } from './emailService.js';
+
+if (!process.env.RESEND_API_KEY) {
+  throw new Error('RESEND_API_KEY is missing in environmental variables. Integration failed.');
+}
+
 import nodemailer from 'nodemailer';
 
 let transporter = null;
@@ -80,33 +86,10 @@ const sendLoginEmail = async (userEmail, userName) => {
 
 const sendRegisterEmail = async (userEmail, userName) => {
   try {
-    const activeTransporter = await getTransporter();
-    if (!activeTransporter) return;
-
-    const mailOptions = {
-      from: `"${process.env.SMTP_FROM_NAME || 'Habit Mastery Terminal'}" <${process.env.SMTP_USER || 'no-reply@habitmastery.io'}>`,
-      to: userEmail,
-      subject: '🚀 Welcome to Habit Mastery Terminal!',
-      text: `Hello ${userName || 'User'},\n\nWelcome to your Habit Mastery Terminal! Your profile has been initialized successfully.\n\nStart customizing your habits, timelines, calendars, and achievements to raise your readiness index.\n\nLevel Up Your Habits!\n- The Habit Mastery Team`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-          <h2 style="color: #00e5ff; margin-top: 0;">🚀 Profile Initialized Successfully!</h2>
-          <p>Hello <strong>${userName || 'User'}</strong>,</p>
-          <p>Welcome to your <strong>Habit Mastery Terminal</strong>!</p>
-          <p>Your workspace environment has been successfully deployed. Start setting up custom habit checklist trackers, scheduling calendar events, and creating workspace objective lists to raise your readiness index and earn XP rank promotions!</p>
-          <p>Go conquer your routine!</p>
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-          <p style="font-size: 11px; color: #64748b; margin-bottom: 0;">This email welcomes you to your new Habit Mastery account.</p>
-        </div>
-      `
-    };
-
-    const info = await activeTransporter.sendMail(mailOptions);
-    console.log(`✉️ Welcome email sent to: ${userEmail}. Message ID: ${info.messageId}`);
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) console.log(`✉️ Welcome Email Preview Link: ${previewUrl}`);
+    const response = await EmailService.sendWelcomeEmail(userEmail, userName || userEmail.split('@')[0]);
+    console.log(`✉️ Welcome email sent via Resend to: ${userEmail}. Result:`, response);
   } catch (err) {
-    console.error('❌ Mailer: Error sending welcome email:', err.message);
+    console.error('❌ Resend: Error sending welcome email:', err.message);
   }
 };
 
@@ -669,29 +652,12 @@ app.post('/api/auth/forgot-password', authRateLimiter, async (req, res) => {
       return res.status(404).json({ error: 'No account registered with this email address.' });
     }
 
-    // Send email via mailer
-    const activeTransporter = await getTransporter();
-    if (activeTransporter) {
-      const mailOptions = {
-        from: `"${process.env.SMTP_FROM_NAME || 'LevelUp OS'}" <${process.env.SMTP_USER || 'no-reply@levelup.io'}>`,
-        to: normalizedEmail,
-        subject: '🔑 LevelUp Security: Password Reset Request',
-        html: `
-          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #1e293b; border-radius: 10px; background-color: #030712; color: #f3f4f6;">
-            <h2 style="color: #00e5ff; margin-top: 0; text-transform: uppercase; font-family: monospace;">🔑 Reset Verification Code</h2>
-            <p>Hello,</p>
-            <p>Use the authorization code below to configure a new password for your LevelUp account:</p>
-            <div style="background-color: #0b0f19; border: 1px solid #1e293b; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
-              <span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #00e5ff; font-family: monospace;">${code}</span>
-            </div>
-            <p style="font-size: 11px; color: #9ca3af; line-height: 1.5;">This security code is active for 15 minutes. If you did not initiate this change, please contact system support.</p>
-          </div>
-        `
-      };
-      const info = await activeTransporter.sendMail(mailOptions);
-      console.log(`🔑 Reset code sent to: ${normalizedEmail}. Message ID: ${info.messageId}`);
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      if (previewUrl) console.log(`🔑 Ethereal Email Preview: ${previewUrl}`);
+    // Send email via Resend
+    try {
+      const response = await EmailService.sendPasswordResetEmail(normalizedEmail, code);
+      console.log(`🔑 Reset code sent via Resend to: ${normalizedEmail}. Result:`, response);
+    } catch (mailErr) {
+      console.error('❌ Resend: Error sending password reset email:', mailErr.message);
     }
 
     return res.json({ success: true, message: 'Reset code dispatched successfully.' });
@@ -769,29 +735,12 @@ app.post('/api/auth/send-verification', authRateLimiter, async (req, res) => {
       return res.status(404).json({ error: 'Account not found.' });
     }
 
-    // Send email via mailer
-    const activeTransporter = await getTransporter();
-    if (activeTransporter) {
-      const mailOptions = {
-        from: `"${process.env.SMTP_FROM_NAME || 'LevelUp OS'}" <${process.env.SMTP_USER || 'no-reply@levelup.io'}>`,
-        to: targetEmail,
-        subject: '✉️ LevelUp Verification: Verify Your Email Address',
-        html: `
-          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #1e293b; border-radius: 10px; background-color: #030712; color: #f3f4f6;">
-            <h2 style="color: #00e5ff; margin-top: 0; text-transform: uppercase; font-family: monospace;">✉️ Verify Email Address</h2>
-            <p>Hello,</p>
-            <p>Welcome to LevelUp! Confirm your email address using the registration code below:</p>
-            <div style="background-color: #0b0f19; border: 1px solid #1e293b; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
-              <span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #00e5ff; font-family: monospace;">${code}</span>
-            </div>
-            <p style="font-size: 11px; color: #9ca3af; line-height: 1.5;">This registration code is active for 15 minutes. If you did not register a LevelUp profile, you can safely disregard this.</p>
-          </div>
-        `
-      };
-      const info = await activeTransporter.sendMail(mailOptions);
-      console.log(`✉️ Verification code sent to: ${targetEmail}. Message ID: ${info.messageId}`);
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      if (previewUrl) console.log(`✉️ Ethereal Email Preview: ${previewUrl}`);
+    // Send email via Resend
+    try {
+      const response = await EmailService.sendVerificationEmail(targetEmail, code);
+      console.log(`✉️ Verification code sent via Resend to: ${targetEmail}. Result:`, response);
+    } catch (mailErr) {
+      console.error('❌ Resend: Error sending verification email:', mailErr.message);
     }
 
     return res.json({ success: true, message: 'Verification code sent.', code });
