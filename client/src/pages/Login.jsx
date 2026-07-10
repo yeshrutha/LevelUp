@@ -20,10 +20,7 @@ export const Login = () => {
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   
-  // Google sign in modal overlay state
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [customGoogleName, setCustomGoogleName] = useState('');
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
+
   
   // Common states
   const [errorMsg, setErrorMsg] = useState('');
@@ -143,25 +140,7 @@ export const Login = () => {
 
 
 
-  const triggerGoogleSignIn = async (gEmail, gName, gAvatar) => {
-    setShowGoogleModal(false);
-    setLoading(true);
-    const res = await loginWithGoogle(gEmail, gName, gAvatar, rememberMe);
-    setLoading(false);
-    if (!res.success) {
-      setErrorMsg(res.error);
-    }
-  };
 
-  const handleCustomGoogleSubmit = (e) => {
-    e.preventDefault();
-    if (!customGoogleName.trim() || !validateEmail(customGoogleEmail)) {
-      triggerToast('Invalid Input', 'Please enter a valid Google name and email.', 'warning');
-      return;
-    }
-    const avatar = `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(customGoogleName.trim())}`;
-    triggerGoogleSignIn(customGoogleEmail.trim().toLowerCase(), customGoogleName.trim(), avatar);
-  };
 
   return (
     <div className="relative min-h-screen w-screen flex items-center justify-center bg-darkbg grid-bg overflow-hidden px-4 select-none">
@@ -460,79 +439,13 @@ export const Login = () => {
           </span>
         </div>
 
-        {/* Custom Google Sign In Trigger */}
-        <button
-          onClick={() => setShowGoogleModal(true)}
-          className="w-full py-2.5 bg-slate-900/60 hover:bg-slate-900 border border-white/5 hover:border-white/15 rounded-lg text-[9px] font-bold uppercase tracking-wider text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
-        >
-          <span className="text-red-400 font-bold">G</span> Google Sign In
-        </button>
+
 
         <div className="border-t border-white/5 pt-4 mt-6 flex items-center justify-center gap-1.5 text-[8px] text-slate-500 font-display">
           <Terminal size={9} />
           <span>PORTAL ACCREDITED SECURE SYSTEM v2.0</span>
         </div>
       </motion.div>
-
-      {/* Interactive Mock Google Account Selector Overlay Modal */}
-      {showGoogleModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="max-w-sm w-full bg-slate-950 border border-white/10 rounded-xl p-6 space-y-4 shadow-2xl relative"
-          >
-            <div className="flex justify-between items-center border-b border-white/5 pb-3">
-              <h3 className="text-xs font-bold font-futuristic text-white uppercase tracking-wider">
-                Sign in with Google
-              </h3>
-              <button
-                onClick={() => setShowGoogleModal(false)}
-                className="text-slate-500 hover:text-white font-bold text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-[10px] text-slate-400 font-display leading-relaxed text-left">
-              Enter your Google credentials to securely link and sync your profile data:
-            </p>
-
-            <div className="pt-2">
-              <form onSubmit={handleCustomGoogleSubmit} className="space-y-3">
-                <div className="space-y-1 text-left">
-                  <label className="block text-[8px] uppercase font-futuristic text-slate-500 font-bold tracking-wider">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter your full name"
-                    value={customGoogleName}
-                    onChange={(e) => setCustomGoogleName(e.target.value)}
-                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-                  />
-                </div>
-                <div className="space-y-1 text-left">
-                  <label className="block text-[8px] uppercase font-futuristic text-slate-500 font-bold tracking-wider">Google Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@gmail.com"
-                    value={customGoogleEmail}
-                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-gradient-to-r from-primary to-accent hover:shadow-glow-accent text-slate-950 font-futuristic font-bold text-[9px] uppercase tracking-widest rounded-lg transition-all cursor-pointer mt-2"
-                >
-                  Link & Authorize Google Profile
-                </button>
-              </form>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 };
