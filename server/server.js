@@ -6,29 +6,8 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import fs from 'fs';
-import admin from 'firebase-admin';
 
 dotenv.config();
-
-// Firebase Admin Initialization
-const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-if (serviceAccountVar) {
-  try {
-    let serviceAccount;
-    if (serviceAccountVar.trim().startsWith('{')) {
-      serviceAccount = JSON.parse(serviceAccountVar);
-    } else {
-      const fileContent = fs.readFileSync(serviceAccountVar, 'utf8');
-      serviceAccount = JSON.parse(fileContent);
-    }
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-    console.log('🔥 Firebase Admin successfully initialized.');
-  } catch (err) {
-    console.error('❌ Firebase Admin: Failed to initialize:', err.message);
-  }
-}
 
 import { EmailService } from './emailService.js';
 
