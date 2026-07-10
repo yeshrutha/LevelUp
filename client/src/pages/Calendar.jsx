@@ -13,20 +13,35 @@ export const Calendar = () => {
   const [type, setType] = useState('Study');
   const [time, setTime] = useState('');
 
-  // Get current active date context (July 2026 as per time metadata)
-  const currentMonth = 'July';
-  const currentYear = '2026';
-  
-  // July 2026 starts on a Wednesday (3rd index in standard week sun-sat)
-  // Total days in July: 31
-  const daysInMonth = 31;
-  const startOffset = 3; 
+  // Dynamic Calendar Date State
+  const [viewDate, setViewDate] = useState(new Date());
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const currentMonth = monthNames[viewDate.getMonth()];
+  const currentYear = viewDate.getFullYear();
+
+  // Get total days in currently viewed month
+  const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+  // Get day of the week that the 1st of the month falls on
+  const startOffset = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
 
   const totalCells = daysInMonth + startOffset;
   const calendarCells = Array.from({ length: totalCells }).map((_, idx) => {
     if (idx < startOffset) return null;
     return idx - startOffset + 1;
   });
+
+  const handlePrevMonth = () => {
+    setViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -42,9 +57,10 @@ export const Calendar = () => {
 
   const getEventsForDay = (dayNum) => {
     if (!dayNum) return [];
-    // Formats dayNum to '2026-07-01', '2026-07-12', etc.
+    const year = viewDate.getFullYear();
+    const monthStr = (viewDate.getMonth() + 1).toString().padStart(2, '0');
     const dayStr = dayNum.toString().padStart(2, '0');
-    const targetDate = `2026-07-${dayStr}`;
+    const targetDate = `${year}-${monthStr}-${dayStr}`;
     return calendar.filter(ev => ev.date === targetDate);
   };
 
@@ -86,9 +102,23 @@ export const Calendar = () => {
         <div className="lg:col-span-2 glass-panel p-5 rounded-xl border-white/10 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center pb-4 border-b border-white/5 mb-4">
-              <span className="font-futuristic font-bold text-sm text-white uppercase tracking-wider">
-                {currentMonth} {currentYear}
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handlePrevMonth}
+                  className="p-1 px-2 rounded hover:bg-white/5 border border-white/10 text-slate-400 hover:text-white cursor-pointer select-none font-futuristic text-xs font-bold"
+                >
+                  &larr;
+                </button>
+                <span className="font-futuristic font-bold text-sm text-white uppercase tracking-wider min-w-[120px] text-center">
+                  {currentMonth} {currentYear}
+                </span>
+                <button
+                  onClick={handleNextMonth}
+                  className="p-1 px-2 rounded hover:bg-white/5 border border-white/10 text-slate-400 hover:text-white cursor-pointer select-none font-futuristic text-xs font-bold"
+                >
+                  &rarr;
+                </button>
+              </div>
               <span className="text-[9px] uppercase tracking-widest text-slate-500 font-display">Timezone: Local Sync</span>
             </div>
 
@@ -110,7 +140,9 @@ export const Calendar = () => {
                 const hasEvents = dayEvents.length > 0;
                 
                 const today = new Date();
-                const isDayToday = dayNum === today.getDate() && today.getMonth() === 6 && today.getFullYear() === 2026;
+                const isDayToday = dayNum === today.getDate() &&
+                                   viewDate.getMonth() === today.getMonth() &&
+                                   viewDate.getFullYear() === today.getFullYear();
                 
                 return (
                   <div 
