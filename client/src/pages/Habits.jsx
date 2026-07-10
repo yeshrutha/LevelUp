@@ -13,6 +13,7 @@ export const Habits = () => {
   const [newHabitHour, setNewHabitHour] = useState('08');
   const [newHabitMinute, setNewHabitMinute] = useState('00');
   const [newHabitPeriod, setNewHabitPeriod] = useState('AM');
+  const [enableAlert, setEnableAlert] = useState(true);
 
   // Get today's logs
   const todayLogs = habits[today] || {};
@@ -27,11 +28,14 @@ export const Habits = () => {
     e.preventDefault();
     if (!newHabitName.trim()) return;
 
-    // Convert 12-hour format + AM/PM into a 24-hour format string HH:MM
-    let hour = parseInt(newHabitHour);
-    if (newHabitPeriod === 'PM' && hour !== 12) hour += 12;
-    if (newHabitPeriod === 'AM' && hour === 12) hour = 0;
-    const formattedTime = `${String(hour).padStart(2, '0')}:${String(newHabitMinute).padStart(2, '0')}`;
+    let formattedTime = null;
+    if (enableAlert) {
+      // Convert 12-hour format + AM/PM into a 24-hour format string HH:MM
+      let hour = parseInt(newHabitHour);
+      if (newHabitPeriod === 'PM' && hour !== 12) hour += 12;
+      if (newHabitPeriod === 'AM' && hour === 12) hour = 0;
+      formattedTime = `${String(hour).padStart(2, '0')}:${String(newHabitMinute).padStart(2, '0')}`;
+    }
 
     addHabit(newHabitName.trim(), formattedTime);
 
@@ -40,6 +44,7 @@ export const Habits = () => {
     setNewHabitHour('08');
     setNewHabitMinute('00');
     setNewHabitPeriod('AM');
+    setEnableAlert(true);
     setShowAddModal(false);
   };
 
@@ -201,34 +206,20 @@ export const Habits = () => {
                 <div>
                   <h3 className="text-xs font-bold text-slate-200 truncate pr-6">{habitName}</h3>
                   
-                  {/* Interactive Bell Toggle and Time Selector */}
-                  <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
-                    <button 
-                      onClick={() => {
-                        const reminder = user?.habitReminders?.[habitName] || { enabled: false, time: '08:00' };
-                        updateHabitReminder(habitName, !reminder.enabled, reminder.time || '08:00');
-                      }}
-                      className={`flex items-center gap-1 text-[8px] uppercase font-futuristic tracking-wider cursor-pointer transition-colors ${
-                        user?.habitReminders?.[habitName]?.enabled ? 'text-cyan-400 font-bold' : 'text-slate-500 hover:text-slate-400'
-                      }`}
-                      title="Toggle email reminder alert"
-                    >
-                      <Bell size={10} className={user?.habitReminders?.[habitName]?.enabled ? "animate-pulse text-cyan-400" : ""} />
-                      <span>{user?.habitReminders?.[habitName]?.enabled ? 'Alert Active' : 'No Alert'}</span>
-                    </button>
-
-                    {user?.habitReminders?.[habitName]?.enabled && (
-                      <input 
-                        type="time"
-                        value={user.habitReminders[habitName].time || '08:00'}
-                        onChange={(e) => {
-                          const newTime = e.target.value;
-                          updateHabitReminder(habitName, true, newTime);
-                        }}
-                        className="bg-slate-950 border border-white/10 rounded px-1.5 py-0.5 text-[9px] text-cyan-400 focus:outline-none focus:border-cyan-500/40 w-16 text-center"
-                      />
-                    )}
-                  </div>
+                  {/* Passive Bell Reminder Indicator */}
+                  {user?.habitReminders?.[habitName]?.enabled && (
+                    <div className="flex items-center gap-1.5 text-[8px] font-futuristic text-cyan-400 uppercase tracking-widest mt-2.5 border-t border-white/5 pt-2">
+                      <Bell size={10} className="animate-pulse" />
+                      <span>{(() => {
+                        const timeStr = user.habitReminders[habitName].time || '08:00';
+                        const [h, m] = timeStr.split(':');
+                        const hr = parseInt(h);
+                        const ampm = hr >= 12 ? 'PM' : 'AM';
+                        const displayHr = hr % 12 || 12;
+                        return `${String(displayHr).padStart(2, '0')}:${m} ${ampm}`;
+                      })()}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-between items-center mt-2.5">
@@ -304,56 +295,79 @@ export const Habits = () => {
                   />
                 </div>
 
-                {/* Habit Time scheduler selectors */}
-                <div className="space-y-1.5 text-left">
-                  <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
-                    Reminder Schedule
-                  </label>
-                  <div className="flex gap-2">
-                    
-                    {/* Hour Select */}
-                    <div className="flex-1">
-                      <select
-                        value={newHabitHour}
-                        onChange={(e) => setNewHabitHour(e.target.value)}
-                        className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center font-bold cursor-pointer"
-                      >
-                        {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
-                          <option key={h} value={h} className="bg-slate-950">{h}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Separator */}
-                    <div className="flex items-center text-slate-400 text-sm font-bold">:</div>
-
-                    {/* Minute Select */}
-                    <div className="flex-1">
-                      <select
-                        value={newHabitMinute}
-                        onChange={(e) => setNewHabitMinute(e.target.value)}
-                        className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center font-bold cursor-pointer"
-                      >
-                        {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
-                          <option key={m} value={m} className="bg-slate-950">{m}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* AM / PM Select */}
-                    <div className="flex-1">
-                      <select
-                        value={newHabitPeriod}
-                        onChange={(e) => setNewHabitPeriod(e.target.value)}
-                        className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center font-bold cursor-pointer"
-                      >
-                        <option value="AM" className="bg-slate-950">AM</option>
-                        <option value="PM" className="bg-slate-950">PM</option>
-                      </select>
-                    </div>
-
+                {/* Enable Alert Toggle */}
+                <div className="flex items-center justify-between bg-slate-900/50 border border-white/5 p-3 rounded-lg">
+                  <div className="flex flex-col text-left">
+                    <span className="text-[10px] font-bold font-futuristic text-slate-300 uppercase tracking-wide">
+                      Email Reminder Alert
+                    </span>
+                    <span className="text-[8px] text-slate-500 font-display mt-0.5">
+                      Receive motivated email reminders & repeaters
+                    </span>
                   </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={enableAlert}
+                      onChange={(e) => setEnableAlert(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500 peer-checked:after:bg-slate-950 peer-checked:after:border-cyan-400"></div>
+                  </label>
                 </div>
+
+                {/* Habit Time scheduler selectors */}
+                {enableAlert && (
+                  <div className="space-y-1.5 text-left animate-fadeIn">
+                    <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
+                      Reminder Schedule
+                    </label>
+                    <div className="flex gap-2">
+                      
+                      {/* Hour Select */}
+                      <div className="flex-1">
+                        <select
+                          value={newHabitHour}
+                          onChange={(e) => setNewHabitHour(e.target.value)}
+                          className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center font-bold cursor-pointer"
+                        >
+                          {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+                            <option key={h} value={h} className="bg-slate-950">{h}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Separator */}
+                      <div className="flex items-center text-slate-400 text-sm font-bold">:</div>
+
+                      {/* Minute Select */}
+                      <div className="flex-1">
+                        <select
+                          value={newHabitMinute}
+                          onChange={(e) => setNewHabitMinute(e.target.value)}
+                          className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center font-bold cursor-pointer"
+                        >
+                          {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+                            <option key={m} value={m} className="bg-slate-950">{m}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* AM / PM Select */}
+                      <div className="flex-1">
+                        <select
+                          value={newHabitPeriod}
+                          onChange={(e) => setNewHabitPeriod(e.target.value)}
+                          className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center font-bold cursor-pointer"
+                        >
+                          <option value="AM" className="bg-slate-950">AM</option>
+                          <option value="PM" className="bg-slate-950">PM</option>
+                        </select>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
 
                 {/* Form Buttons */}
                 <div className="flex gap-3 pt-2">
