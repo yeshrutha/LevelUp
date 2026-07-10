@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Sparkles, Brain, Loader2, CheckCircle, Calendar, List, AlertCircle, Play, ArrowRight, Check } from 'lucide-react';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://levelup-1-7j6v.onrender.com';
 export default function AIPlanner() {
   const { 
     user, 

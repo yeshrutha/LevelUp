@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CUTE_AVATARS, AvatarRenderer } from '../components/AvatarRenderer';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://levelup-1-7j6v.onrender.com';
 export const Settings = () => {
   const { 
     user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, 

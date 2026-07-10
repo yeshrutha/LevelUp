@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Sparkles, Trash2, Calendar, CheckSquare, ListTodo, Sliders, Play, AlertCircle, Bot, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://levelup-1-7j6v.onrender.com';
 export const NotionPage = ({ pageId }) => {
   const { customPages, updateCustomPage, deleteCustomPage, togglePageTask, setCurrentTab } = useApp();
   

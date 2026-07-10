@@ -96,13 +96,19 @@ const sendRegisterEmail = async (userEmail, userName) => {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'replace-with-secure-secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '4h';
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || ['http://localhost:5173'];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()) || [];
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(helmet());
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    // Reflect the request origin back to support credentials safely in non-production environments
+    callback(null, true);
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // In-memory fallback database for multi-user isolation

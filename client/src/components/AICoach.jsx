@@ -5,7 +5,7 @@ import { X, Send, Bot, Sparkles, Trash2 } from 'lucide-react';
 
 export const AICoach = () => {
   const { user } = useApp();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://levelup-1-7j6v.onrender.com';
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState(() => {
