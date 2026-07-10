@@ -1,22 +1,99 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings as SettingsIcon, Sun, Moon, User, Mail, AlertOctagon, ShieldAlert, Sparkles, ArrowLeft } from 'lucide-react';
+import { Settings as SettingsIcon, Sun, Moon, User, Mail, Phone, ShieldCheck, AlertOctagon, ShieldAlert, Sparkles, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const Settings = () => {
-  const { user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, setCurrentTab } = useApp();
+  const { user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, setCurrentTab, triggerToast } = useApp();
 
   const [editEmail, setEditEmail] = useState(user?.email || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Email Verification State
+  const [emailVerifying, setEmailVerifying] = useState(false);
+  const [emailVerifiedCode, setEmailVerifiedCode] = useState('');
+  const [emailEnteredCode, setEmailEnteredCode] = useState('');
+
+  // Phone Verification State
+  const [phoneVerifying, setPhoneVerifying] = useState(false);
+  const [phoneVerifiedCode, setPhoneVerifiedCode] = useState('');
+  const [phoneEnteredCode, setPhoneEnteredCode] = useState('');
+
+  const sendEmailCode = () => {
+    if (!editEmail.trim()) {
+      triggerToast('Validation Error', 'Please enter a valid email address first.', 'warning');
+      return;
+    }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setEmailVerifiedCode(code);
+    setEmailVerifying(true);
+    triggerToast('Verification Code Sent', `OTP code sent to email: ${code}`, 'success');
+  };
+
+  const confirmEmailCode = () => {
+    if (emailEnteredCode.trim() === emailVerifiedCode) {
+      setUser(prev => {
+        const nextUser = {
+          ...prev,
+          email: editEmail.trim(),
+          emailVerified: true
+        };
+        localStorage.setItem('levelup_user', JSON.stringify(nextUser));
+        return nextUser;
+      });
+      setEmailVerifying(false);
+      setEmailEnteredCode('');
+      triggerToast('Email Verified', 'Your email address has been verified successfully!', 'success');
+    } else {
+      triggerToast('Verification Failed', 'Invalid verification code. Please try again!', 'error');
+    }
+  };
+
+  const sendPhoneCode = () => {
+    if (!phoneNumber.trim()) {
+      triggerToast('Validation Error', 'Please enter a valid phone number first.', 'warning');
+      return;
+    }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setPhoneVerifiedCode(code);
+    setPhoneVerifying(true);
+    triggerToast('OTP Code Sent', `OTP code sent to phone: ${code}`, 'success');
+  };
+
+  const confirmPhoneCode = () => {
+    if (phoneEnteredCode.trim() === phoneVerifiedCode) {
+      setUser(prev => {
+        const nextUser = {
+          ...prev,
+          phoneNumber: phoneNumber.trim(),
+          phoneVerified: true
+        };
+        localStorage.setItem('levelup_user', JSON.stringify(nextUser));
+        return nextUser;
+      });
+      setPhoneVerifying(false);
+      setPhoneEnteredCode('');
+      triggerToast('Phone Verified', 'Your phone number has been verified successfully!', 'success');
+    } else {
+      triggerToast('Verification Failed', 'Invalid OTP code. Please try again!', 'error');
+    }
+  };
 
   const handleProfileSubmit = (e) => {
     e.preventDefault();
     if (!editEmail.trim()) return;
 
     setUser(prev => {
+      const isEmailStillVerified = prev.email === editEmail.trim() && prev.emailVerified;
+      const isPhoneStillVerified = prev.phoneNumber === phoneNumber.trim() && prev.phoneVerified;
+
       const nextUser = {
         ...prev,
-        email: editEmail.trim()
+        email: editEmail.trim(),
+        phoneNumber: phoneNumber.trim(),
+        emailVerified: isEmailStillVerified,
+        phoneVerified: isPhoneStillVerified
       };
       localStorage.setItem('levelup_user', JSON.stringify(nextUser));
       return nextUser;
@@ -112,22 +189,149 @@ export const Settings = () => {
           Profile Identity Options
         </h3>
 
-        <form onSubmit={handleProfileSubmit} className="space-y-4">
+        <form onSubmit={handleProfileSubmit} className="space-y-6">
           
-          <div className="space-y-1">
-            <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-semibold tracking-wider">
-              Email Address
-            </label>
-            <div className="relative">
-              <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input 
-                type="email"
-                required
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                className="w-full bg-slate-950 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-              />
+          {/* Email Address Section */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
+                Email Address
+              </label>
+              {user?.email === editEmail.trim() && user?.emailVerified ? (
+                <span className="text-[8px] font-bold font-futuristic text-emerald-400 bg-emerald-500/10 border border-emerald-400/20 px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest">
+                  <ShieldCheck size={10} /> Verified
+                </span>
+              ) : (
+                <span className="text-[8px] font-bold font-futuristic text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">
+                  Unverified
+                </span>
+              )}
             </div>
+
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input 
+                  type="email"
+                  required
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full bg-slate-950 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+                  placeholder="name@domain.com"
+                />
+              </div>
+              
+              {!(user?.email === editEmail.trim() && user?.emailVerified) && (
+                <button
+                  type="button"
+                  onClick={sendEmailCode}
+                  className="px-3.5 py-2 border border-cyan-500/30 hover:border-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 text-accent font-futuristic font-bold text-[9px] uppercase rounded transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Verify Email
+                </button>
+              )}
+            </div>
+
+            {/* Email OTP Code entry */}
+            {emailVerifying && (
+              <motion.div 
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-slate-950/50 border border-white/5 rounded-lg p-3 space-y-2 mt-2"
+              >
+                <p className="text-[9px] text-slate-400 font-display">
+                  We've sent a 6-digit confirmation code. Enter it below to activate system alerts.
+                </p>
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    maxLength={6}
+                    value={emailEnteredCode}
+                    onChange={(e) => setEmailEnteredCode(e.target.value)}
+                    placeholder="Enter Code (e.g. 123456)"
+                    className="flex-1 bg-slate-900 border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500/30 font-mono text-center tracking-widest font-bold"
+                  />
+                  <button
+                    type="button"
+                    onClick={confirmEmailCode}
+                    className="px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 font-futuristic font-bold text-[9px] uppercase rounded transition-all cursor-pointer"
+                  >
+                    Confirm Code
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Phone Number Section */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
+                Phone Number (Alert Notifications)
+              </label>
+              {phoneNumber.trim() && user?.phoneNumber === phoneNumber.trim() && user?.phoneVerified ? (
+                <span className="text-[8px] font-bold font-futuristic text-emerald-400 bg-emerald-500/10 border border-emerald-400/20 px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest">
+                  <ShieldCheck size={10} /> Verified
+                </span>
+              ) : (
+                <span className="text-[8px] font-bold font-futuristic text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded uppercase tracking-widest animate-pulse">
+                  {phoneNumber.trim() ? 'Unverified' : 'Not Set'}
+                </span>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input 
+                  type="text"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="w-full bg-slate-950 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+                  placeholder="e.g. +91 9876543210"
+                />
+              </div>
+              
+              {phoneNumber.trim() && !(user?.phoneNumber === phoneNumber.trim() && user?.phoneVerified) && (
+                <button
+                  type="button"
+                  onClick={sendPhoneCode}
+                  className="px-3.5 py-2 border border-cyan-500/30 hover:border-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 text-accent font-futuristic font-bold text-[9px] uppercase rounded transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Send OTP
+                </button>
+              )}
+            </div>
+
+            {/* Phone OTP Code entry */}
+            {phoneVerifying && (
+              <motion.div 
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-slate-950/50 border border-white/5 rounded-lg p-3 space-y-2 mt-2"
+              >
+                <p className="text-[9px] text-slate-400 font-display">
+                  We've sent a 6-digit OTP code to your device. Confirm it to subscribe to alerts.
+                </p>
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    maxLength={6}
+                    value={phoneEnteredCode}
+                    onChange={(e) => setPhoneEnteredCode(e.target.value)}
+                    placeholder="Enter OTP (e.g. 123456)"
+                    className="flex-1 bg-slate-900 border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500/30 font-mono text-center tracking-widest font-bold"
+                  />
+                  <button
+                    type="button"
+                    onClick={confirmPhoneCode}
+                    className="px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 font-futuristic font-bold text-[9px] uppercase rounded transition-all cursor-pointer"
+                  >
+                    Confirm OTP
+                  </button>
+                </div>
+              </motion.div>
+            )}
           </div>
 
           <div className="flex items-center justify-between pt-2">

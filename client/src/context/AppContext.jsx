@@ -315,7 +315,10 @@ export const AppProvider = ({ children }) => {
         level: 1,
         rank: 'Iron II',
         streak: 3,
-        readiness: 55
+        readiness: 55,
+        emailVerified: false,
+        phoneVerified: false,
+        phoneNumber: ''
       };
 
       const demoHabitList = ['Exercise', 'Drink Water', 'Read Book', 'No Junk Food'];
@@ -411,7 +414,10 @@ export const AppProvider = ({ children }) => {
           readiness: 0,
           themeMode: 'light',
           isMuted: false,
-          unlockedAchievements: []
+          unlockedAchievements: [],
+          emailVerified: false,
+          phoneVerified: false,
+          phoneNumber: ''
         };
 
         const freshHabitList = [];
