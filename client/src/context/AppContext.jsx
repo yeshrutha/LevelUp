@@ -253,7 +253,7 @@ export const AppProvider = ({ children }) => {
   };
 
   // Custom User Sign-In Action (Supports Demo Mode or Isolated Email registration)
-  const loginUser = async (name, email, useDemoData = false, isSignUp = false) => {
+  const loginUser = async (name, email, password = '', useDemoData = false, isSignUp = false) => {
     if (useDemoData) {
       const demoUser = {
         displayName: 'Penguin Cadet',
@@ -348,44 +348,21 @@ export const AppProvider = ({ children }) => {
         const nextRegistered = [...registered, emailKey];
         localStorage.setItem('levelup_registered_emails', JSON.stringify(nextRegistered));
 
-        const isYechuu = emailKey === 'yeshruthagowda@gmail.com';
-
         const freshUser = {
-          displayName: isYechuu ? 'Yechuu' : name,
+          displayName: name,
           email: emailKey,
           level: 1,
-          xp: 150,
-          rank: 'Iron II',
-          streak: 3,
-          readiness: 65,
+          xp: 0,
+          rank: 'Iron I',
+          streak: 0,
+          readiness: 0,
           themeMode: 'light',
           isMuted: false,
           unlockedAchievements: []
         };
 
-        const freshHabitList = isYechuu ? [
-          "Wake Up: 6:15 AM",
-          "Breakfast: 6:30 AM - 7:00 AM",
-          "Revision: 7:00 AM - 7:30 AM",
-          "Travel to College: 7:30 AM - 8:15 AM",
-          "College: 8:45 AM - 4:30 PM",
-          "Travel Home: 4:30 PM - 5:00 PM",
-          "Relax + Snack: 5:00 PM - 5:30 PM",
-          "Gym: 5:30 PM - 7:30 PM",
-          "Dinner: 7:30 PM - 8:00 PM",
-          "Focused Study: 8:00 PM - 10:00 PM",
-          "Gaming: 10:00 PM - 11:00 PM",
-          "Plan Tomorrow: 11:00 PM - 11:20 PM",
-          "Sleep: 11:30 PM",
-          "Drink Water",
-          "Communication Practice"
-        ] : [];
-
-        const freshCalendar = isYechuu ? [
-          { id: "cal_init_1", title: "Placement Readiness Target", date: "2026-07-20", type: "Goal", time: "09:00 AM" },
-          { id: "cal_init_2", title: "Weekly Growth Review", date: "2026-07-15", type: "Review", time: "02:00 PM" }
-        ] : [];
-
+        const freshHabitList = [];
+        const freshCalendar = [];
         const freshGoal = { title: '', targetDate: '' };
 
         localStorage.setItem(`levelup_user_${emailKey}`, JSON.stringify(freshUser));
