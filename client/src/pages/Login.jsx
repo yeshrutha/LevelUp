@@ -141,14 +141,7 @@ export const Login = () => {
     }
   };
 
-  const handleDemoLogin = () => {
-    setErrorMsg('');
-    setLoading(true);
-    setTimeout(async () => {
-      await loginUser('', '', '', true, false, rememberMe);
-      setLoading(false);
-    }, 800);
-  };
+
 
   const triggerGoogleSignIn = async (gEmail, gName, gAvatar) => {
     setShowGoogleModal(false);
@@ -467,22 +460,13 @@ export const Login = () => {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {/* Custom Google Sign In Trigger */}
-          <button
-            onClick={() => setShowGoogleModal(true)}
-            className="py-2.5 bg-slate-900/60 hover:bg-slate-900 border border-white/5 hover:border-white/15 rounded-lg text-[9px] font-bold uppercase tracking-wider text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
-          >
-            <span className="text-red-400 font-bold">G</span> Google Sign In
-          </button>
-          
-          <button
-            onClick={handleDemoLogin}
-            className="py-2.5 bg-slate-900/60 hover:bg-slate-900 border border-white/5 hover:border-white/15 rounded-lg text-[9px] font-bold uppercase tracking-wider text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
-          >
-            <Terminal size={11} className="text-accent" /> Demo Sandbox
-          </button>
-        </div>
+        {/* Custom Google Sign In Trigger */}
+        <button
+          onClick={() => setShowGoogleModal(true)}
+          className="w-full py-2.5 bg-slate-900/60 hover:bg-slate-900 border border-white/5 hover:border-white/15 rounded-lg text-[9px] font-bold uppercase tracking-wider text-slate-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+        >
+          <span className="text-red-400 font-bold">G</span> Google Sign In
+        </button>
 
         <div className="border-t border-white/5 pt-4 mt-6 flex items-center justify-center gap-1.5 text-[8px] text-slate-500 font-display">
           <Terminal size={9} />
