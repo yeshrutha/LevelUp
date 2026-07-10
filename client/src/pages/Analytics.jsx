@@ -12,27 +12,56 @@ import { Hourglass, Trophy, Activity, MessageSquare, BookOpen } from 'lucide-rea
 export const Analytics = () => {
   const { user, customPages, habits, habitList } = useApp();
 
-  // 1. Mock Study/Focus Hours per day
-  const focusData = [
-    { day: 'Mon', hours: 4.5 },
-    { day: 'Tue', hours: 6.0 },
-    { day: 'Wed', hours: 3.5 },
-    { day: 'Thu', hours: 5.5 },
-    { day: 'Fri', hours: 7.0 },
-    { day: 'Sat', hours: 4.0 },
-    { day: 'Sun', hours: 2.0 }
-  ];
+  // Get date strings for the current week (Monday to Sunday)
+  const getCurrentWeekDates = () => {
+    const dates = [];
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 is Sunday, 1 is Monday, etc.
+    
+    // Adjust so Monday is 0, Sunday is 6
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+    
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + mondayOffset);
+    
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      dates.push({
+        dayName: dayNames[i],
+        dateStr
+      });
+    }
+    return dates;
+  };
 
-  // 2. Mock XP Earned progress over the week
-  const xpData = [
-    { name: 'Mon', xp: 120 },
-    { name: 'Tue', xp: 260 },
-    { name: 'Wed', xp: 340 },
-    { name: 'Thu', xp: 480 },
-    { name: 'Fri', xp: 620 },
-    { name: 'Sat', xp: 700 },
-    { name: 'Sun', xp: 750 }
-  ];
+  const weekDays = getCurrentWeekDates();
+  
+  // 1. Calculate dynamic Study/Focus Hours per day (1.5 hours per completed habit)
+  const focusData = weekDays.map(wd => {
+    const dayLogs = habits[wd.dateStr] || {};
+    const checkedCount = Object.keys(dayLogs).filter(name => habitList.includes(name) && dayLogs[name]).length;
+    return {
+      day: wd.dayName,
+      hours: checkedCount * 1.5
+    };
+  });
+
+  // 2. Calculate dynamic XP progress over the week (cumulative)
+  let cumulativeXp = 0;
+  const xpData = weekDays.map(wd => {
+    const dayLogs = habits[wd.dateStr] || {};
+    const checkedCount = Object.keys(dayLogs).filter(name => habitList.includes(name) && dayLogs[name]).length;
+    const dayXp = checkedCount * 15;
+    cumulativeXp += dayXp;
+    return {
+      name: wd.dayName,
+      xp: cumulativeXp
+    };
+  });
 
   // 3. Today's Habit checked breakdown
   const todayStr = new Date().toISOString().split('T')[0];
