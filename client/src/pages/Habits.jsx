@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { CheckCircle2, Flame, Award, Trash2, Plus, Info, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Flame, Award, Trash2, Plus, Info, AlertTriangle, Bell } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const Habits = () => {
-  const { habits, toggleHabit, habitList, addHabit, deleteHabit, user } = useApp();
+  const { habits, toggleHabit, habitList, addHabit, deleteHabit, user, setUser } = useApp();
   const today = new Date().toISOString().split('T')[0];
   const [inputHabit, setInputHabit] = useState('');
-  const [enableReminder, setEnableReminder] = useState(false);
   const [reminderTime, setReminderTime] = useState('08:00');
   
   // Get today's logs
@@ -22,9 +21,8 @@ export const Habits = () => {
   const handleAddSubmit = (e) => {
     e.preventDefault();
     if (!inputHabit.trim()) return;
-    addHabit(inputHabit.trim(), enableReminder ? reminderTime : null);
+    addHabit(inputHabit.trim(), reminderTime);
     setInputHabit('');
-    setEnableReminder(false);
     setReminderTime('08:00');
   };
 
@@ -98,7 +96,7 @@ export const Habits = () => {
         </h3>
         
         <form onSubmit={handleAddSubmit} className="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-white/5">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input 
               type="text"
               required
@@ -107,38 +105,25 @@ export const Habits = () => {
               placeholder="Add new routine (e.g. Read books, Gym session, Drink 3L Water)..."
               className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
             />
+            
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] text-slate-500 uppercase font-futuristic shrink-0">Reminder Time:</span>
+              <input 
+                type="time"
+                required
+                value={reminderTime}
+                onChange={(e) => setReminderTime(e.target.value)}
+                className="bg-slate-950 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center"
+              />
+            </div>
+
             <button
               type="submit"
-              className="px-4 py-2 bg-gradient-to-r from-primary to-accent hover:from-primary-light hover:to-accent-light text-slate-950 font-futuristic font-bold text-xs uppercase rounded shadow cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 bg-gradient-to-r from-primary to-accent hover:from-primary-light hover:to-accent-light text-slate-950 font-futuristic font-bold text-xs uppercase rounded shadow cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
             >
               <Plus size={14} />
               Add Habit
             </button>
-          </div>
-          
-          <div className="flex items-center gap-4 text-[10px]">
-            <label className="flex items-center gap-1.5 cursor-pointer text-slate-400 hover:text-slate-200">
-              <input 
-                type="checkbox"
-                checked={enableReminder}
-                onChange={(e) => setEnableReminder(e.target.checked)}
-                className="accent-primary"
-              />
-              <span>Enable Email Reminder Alert</span>
-            </label>
-            
-            {enableReminder && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[9px] text-slate-500 uppercase font-futuristic">Schedule Time:</span>
-                <input 
-                  type="time"
-                  required
-                  value={reminderTime}
-                  onChange={(e) => setReminderTime(e.target.value)}
-                  className="bg-slate-950 border border-white/10 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-                />
-              </div>
-            )}
           </div>
         </form>
       </div>
@@ -209,7 +194,7 @@ export const Habits = () => {
             return (
               <div 
                 key={idx}
-                className={`glass-panel p-4 rounded-xl border flex flex-col justify-between h-32 transition-all duration-200 group relative ${
+                className={`glass-panel p-4 rounded-xl border flex flex-col justify-between h-[155px] transition-all duration-200 group relative ${
                   checked 
                     ? 'border-emerald-500/30 bg-emerald-500/[0.03] shadow-glow-success' 
                     : 'border-white/5 hover:border-cyan-500/25 bg-slate-900/40'
@@ -233,24 +218,65 @@ export const Habits = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-xs font-bold text-slate-200 mt-2 truncate pr-6">{habitName}</h3>
-                  {user?.habitReminders?.[habitName]?.enabled && (
-                    <div className="text-[8px] text-cyan-400 mt-1 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                      <span>Scheduled Email at {user.habitReminders[habitName].time}</span>
-                    </div>
-                  )}
+                  <h3 className="text-xs font-bold text-slate-200 truncate pr-6">{habitName}</h3>
                   
-                  <div className="flex justify-between items-center mt-4">
-                    <span className="text-[9px] font-bold font-futuristic text-accent bg-cyan-500/10 border border-cyan-400/20 px-2 py-0.5 rounded">
-                      XP Gain
-                    </span>
-                    {checked && (
-                      <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest font-display">
-                        Complete
-                      </span>
+                  {/* Interactive Bell Toggle and Time Selector */}
+                  <div className="mt-2.5 flex items-center justify-between border-t border-white/5 pt-2">
+                    <button 
+                      onClick={() => {
+                        const reminder = user?.habitReminders?.[habitName] || { enabled: false, time: '08:00' };
+                        setUser(prev => ({
+                          ...prev,
+                          habitReminders: {
+                            ...(prev.habitReminders || {}),
+                            [habitName]: {
+                              enabled: !reminder.enabled,
+                              time: reminder.time || '08:00'
+                            }
+                          }
+                        }));
+                      }}
+                      className={`flex items-center gap-1 text-[8px] uppercase font-futuristic tracking-wider cursor-pointer transition-colors ${
+                        user?.habitReminders?.[habitName]?.enabled ? 'text-cyan-400 font-bold' : 'text-slate-500 hover:text-slate-400'
+                      }`}
+                      title="Toggle email reminder alert"
+                    >
+                      <Bell size={10} className={user?.habitReminders?.[habitName]?.enabled ? "animate-pulse text-cyan-400" : ""} />
+                      <span>{user?.habitReminders?.[habitName]?.enabled ? 'Alert Active' : 'No Alert'}</span>
+                    </button>
+
+                    {user?.habitReminders?.[habitName]?.enabled && (
+                      <input 
+                        type="time"
+                        value={user.habitReminders[habitName].time || '08:00'}
+                        onChange={(e) => {
+                          const newTime = e.target.value;
+                          setUser(prev => ({
+                            ...prev,
+                            habitReminders: {
+                              ...(prev.habitReminders || {}),
+                              [habitName]: {
+                                enabled: true,
+                                time: newTime
+                              }
+                            }
+                          }));
+                        }}
+                        className="bg-slate-950 border border-white/10 rounded px-1.5 py-0.5 text-[9px] text-cyan-400 focus:outline-none focus:border-cyan-500/40 w-16 text-center"
+                      />
                     )}
                   </div>
+                </div>
+
+                <div className="flex justify-between items-center mt-2.5">
+                  <span className="text-[9px] font-bold font-futuristic text-accent bg-cyan-500/10 border border-cyan-400/20 px-2 py-0.5 rounded">
+                    XP Gain
+                  </span>
+                  {checked && (
+                    <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest font-display">
+                      Complete
+                    </span>
+                  )}
                 </div>
 
                 {/* Trash delete habit button */}
