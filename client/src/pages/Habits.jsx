@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { CheckCircle2, Flame, Award, Trash2, Plus, Info, AlertTriangle, Bell } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const Habits = () => {
   const { habits, toggleHabit, habitList, addHabit, deleteHabit, user, setUser } = useApp();
   const today = new Date().toISOString().split('T')[0];
-  const [inputHabit, setInputHabit] = useState('');
-  const [reminderTime, setReminderTime] = useState('08:00');
+  
+  // Modal states for habit creation
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newHabitName, setNewHabitName] = useState('');
+  const [newHabitHour, setNewHabitHour] = useState('08');
+  const [newHabitMinute, setNewHabitMinute] = useState('00');
+  const [newHabitPeriod, setNewHabitPeriod] = useState('AM');
   
   // Get today's logs
   const todayLogs = habits[today] || {};
@@ -18,12 +23,24 @@ export const Habits = () => {
   // Streak count
   const streakCount = 5;
 
-  const handleAddSubmit = (e) => {
+  const handleModalSubmit = (e) => {
     e.preventDefault();
-    if (!inputHabit.trim()) return;
-    addHabit(inputHabit.trim(), reminderTime);
-    setInputHabit('');
-    setReminderTime('08:00');
+    if (!newHabitName.trim()) return;
+
+    // Convert 12-hour format + AM/PM into a 24-hour format string HH:MM
+    let hour = parseInt(newHabitHour);
+    if (newHabitPeriod === 'PM' && hour !== 12) hour += 12;
+    if (newHabitPeriod === 'AM' && hour === 12) hour = 0;
+    const formattedTime = `${String(hour).padStart(2, '0')}:${String(newHabitMinute).padStart(2, '0')}`;
+
+    addHabit(newHabitName.trim(), formattedTime);
+
+    // Reset and close
+    setNewHabitName('');
+    setNewHabitHour('08');
+    setNewHabitMinute('00');
+    setNewHabitPeriod('AM');
+    setShowAddModal(false);
   };
 
   // Render 7-day history calendar
@@ -71,7 +88,7 @@ export const Habits = () => {
     <div className="space-y-6 pb-12 select-none">
       
       {/* Title */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-white font-futuristic tracking-wide">
             Habits Checklist
@@ -81,51 +98,22 @@ export const Habits = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 px-3.5 py-1.5 rounded-lg">
-          <Flame size={16} className="text-orange-400 animate-bounce" />
-          <span className="text-xs font-bold font-futuristic text-orange-400 uppercase tracking-widest">
-            {streakCount} Day Streak
-          </span>
-        </div>
-      </div>
-
-      {/* Habit Customizer input bar */}
-      <div className="glass-panel p-5 rounded-xl border-white/10">
-        <h3 className="text-xs font-futuristic font-bold text-slate-300 uppercase tracking-wider mb-3">
-          Customize Your Trackers
-        </h3>
-        
-        <form onSubmit={handleAddSubmit} className="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-white/5">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input 
-              type="text"
-              required
-              value={inputHabit}
-              onChange={(e) => setInputHabit(e.target.value)}
-              placeholder="Add new routine (e.g. Read books, Gym session, Drink 3L Water)..."
-              className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-            />
-            
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] text-slate-500 uppercase font-futuristic shrink-0">Reminder Time:</span>
-              <input 
-                type="time"
-                required
-                value={reminderTime}
-                onChange={(e) => setReminderTime(e.target.value)}
-                className="bg-slate-950 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="px-4 py-2 bg-gradient-to-r from-primary to-accent hover:from-primary-light hover:to-accent-light text-slate-950 font-futuristic font-bold text-xs uppercase rounded shadow cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-            >
-              <Plus size={14} />
-              Add Habit
-            </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 px-3.5 py-1.5 rounded-lg">
+            <Flame size={16} className="text-orange-400 animate-bounce" />
+            <span className="text-xs font-bold font-futuristic text-orange-400 uppercase tracking-widest">
+              {streakCount} Day Streak
+            </span>
           </div>
-        </form>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2.5 bg-gradient-to-r from-primary to-accent hover:shadow-glow-accent text-slate-950 font-futuristic font-bold text-xs uppercase rounded-lg shadow-lg cursor-pointer flex items-center gap-2 transition-all shrink-0"
+          >
+            <Plus size={14} />
+            Add Habit
+          </button>
+        </div>
       </div>
 
       {/* Overview Block */}
@@ -293,7 +281,7 @@ export const Habits = () => {
         </div>
       ) : (
         <div className="glass-panel p-8 text-center border-white/10 rounded-xl text-slate-500 text-xs font-display">
-          No habits configured. Add one using the input bar above.
+          No habits configured. Deploy one using the "Add Habit" button above.
         </div>
       )}
 
@@ -304,6 +292,119 @@ export const Habits = () => {
         </h3>
         {renderHistory()}
       </div>
+
+      {/* ADD HABIT MODAL POPUP */}
+      <AnimatePresence>
+        {showAddModal && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="max-w-md w-full glass-panel border-white/10 rounded-2xl p-6 shadow-2xl relative"
+            >
+              {/* Corner accent lines */}
+              <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-cyan-500/40" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-cyan-500/40" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-cyan-500/40" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-cyan-500/40" />
+
+              <h3 className="text-sm font-futuristic font-bold text-white uppercase tracking-wider mb-4 text-left">
+                Deploy New Habit Tracker
+              </h3>
+
+              <form onSubmit={handleModalSubmit} className="space-y-4">
+                {/* Habit Name input */}
+                <div className="space-y-1.5 text-left">
+                  <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
+                    Habit Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newHabitName}
+                    onChange={(e) => setNewHabitName(e.target.value)}
+                    placeholder="e.g. Read books, Gym session, Drink water..."
+                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+                  />
+                </div>
+
+                {/* Habit Time scheduler selectors */}
+                <div className="space-y-1.5 text-left">
+                  <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
+                    Reminder Schedule
+                  </label>
+                  <div className="flex gap-2">
+                    
+                    {/* Hour Select */}
+                    <div className="flex-1">
+                      <select
+                        value={newHabitHour}
+                        onChange={(e) => setNewHabitHour(e.target.value)}
+                        className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center font-bold cursor-pointer"
+                      >
+                        {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+                          <option key={h} value={h} className="bg-slate-950">{h}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Separator */}
+                    <div className="flex items-center text-slate-400 text-sm font-bold">:</div>
+
+                    {/* Minute Select */}
+                    <div className="flex-1">
+                      <select
+                        value={newHabitMinute}
+                        onChange={(e) => setNewHabitMinute(e.target.value)}
+                        className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center font-bold cursor-pointer"
+                      >
+                        {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+                          <option key={m} value={m} className="bg-slate-950">{m}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* AM / PM Select */}
+                    <div className="flex-1">
+                      <select
+                        value={newHabitPeriod}
+                        onChange={(e) => setNewHabitPeriod(e.target.value)}
+                        className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 text-center font-bold cursor-pointer"
+                      >
+                        <option value="AM" className="bg-slate-950">AM</option>
+                        <option value="PM" className="bg-slate-950">PM</option>
+                      </select>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Form Buttons */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setNewHabitName('');
+                    }}
+                    className="flex-1 py-2 bg-slate-900 hover:bg-slate-850 border border-white/5 text-slate-400 font-futuristic font-bold text-xs uppercase rounded cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-gradient-to-r from-primary to-accent hover:from-primary-light hover:to-accent-light text-slate-950 font-futuristic font-bold text-xs uppercase rounded shadow cursor-pointer transition-colors"
+                  >
+                    Deploy Tracker
+                  </button>
+                </div>
+
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

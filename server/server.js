@@ -177,6 +177,7 @@ const UserDataSchema = new mongoose.Schema({
   emailVerified: { type: Boolean, default: false },
   phoneVerified: { type: Boolean, default: false },
   profile: { type: Object, default: {} },
+  habits: { type: Object, default: {} },
   habitList: { type: Array, default: [] },
   customPages: { type: Array, default: [] },
   calendar: { type: Array, default: [] },
@@ -1351,20 +1352,43 @@ const sendHabitReminders = async () => {
       const formattedTime = `${parts[0]}:${parts[1]}`;
 
       for (const [habitName, reminder] of Object.entries(reminders)) {
-        if (reminder && reminder.enabled && reminder.time === formattedTime) {
-          const cacheKey = `${u.email}_${habitName}_${dateKey}_${formattedTime}`;
-          if (sentRemindersCache[cacheKey]) continue;
-
-          sentRemindersCache[cacheKey] = true;
-          const recipient = u.email;
-          const displayName = profile.displayName || 'LevelUp User';
-
-          console.log(`⏰ Dispatching scheduled email reminder to ${recipient} for: "${habitName}" at ${reminder.time}`);
-          
+        if (reminder && reminder.enabled && reminder.time) {
+          // Get local date key for this user
+          let userDateStr = dateKey;
           try {
-            await EmailService.sendHabitReminderEmail(recipient, displayName, habitName);
-          } catch (mailErr) {
-            console.error(`❌ Resend: Failed to send reminder to ${recipient}:`, mailErr.message);
+            userDateStr = now.toLocaleDateString('en-CA', { timeZone: timezone });
+          } catch (e) {}
+
+          // Check if habit is already completed today
+          const isCompleted = !!(u.habits?.[userDateStr]?.[habitName]);
+          if (isCompleted) continue; // Skip if checked off!
+
+          // Parse times
+          const timeParts = reminder.time.split(':');
+          if (timeParts.length < 2) continue;
+          const [remHour, remMin] = timeParts.map(Number);
+          const [userHour, userMin] = parts.map(Number);
+
+          const reminderMinutes = remHour * 60 + remMin;
+          const userMinutes = userHour * 60 + userMin;
+          const diffMinutes = userMinutes - reminderMinutes;
+
+          // Send if past the scheduled time and a multiple of 5 minutes later
+          if (diffMinutes >= 0 && diffMinutes % 5 === 0) {
+            const cacheKey = `${u.email}_${habitName}_${userDateStr}_${formattedTime}`;
+            if (sentRemindersCache[cacheKey]) continue;
+
+            sentRemindersCache[cacheKey] = true;
+            const recipient = u.email;
+            const displayName = profile.displayName || 'LevelUp User';
+
+            console.log(`⏰ Snooze Reminder: dispatching to ${recipient} for incomplete: "${habitName}" at ${formattedTime} (Diff: ${diffMinutes}m)`);
+            
+            try {
+              await EmailService.sendHabitReminderEmail(recipient, displayName, habitName);
+            } catch (mailErr) {
+              console.error(`❌ Resend: Failed to send snooze reminder to ${recipient}:`, mailErr.message);
+            }
           }
         }
       }

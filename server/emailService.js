@@ -225,27 +225,51 @@ export const EmailService = {
   sendHabitReminderEmail: async (toEmail, displayName, habitName) => {
     const resend = getResendInstance();
     const from = getFromEmail();
+    const websiteUrl = getWebsiteUrl();
+    
+    const MOTIVATIONAL_PHRASES = [
+      "Consistency is the foundation of virtue. Do it for your future self!",
+      "Small daily habits compound into massive lifetime gains. You can do this!",
+      "Make today count. Your streaks define your resilience and power!",
+      "Every completed habit is a step closer to mastering your potential.",
+      "Focus on the process, not just the results. Power through your routine!",
+      "Action cures fear and builds momentum. Go tick this off!",
+      "Your potential is endless. Keep the momentum high and complete this task!"
+    ];
+    const phrase = MOTIVATIONAL_PHRASES[Math.floor(Math.random() * MOTIVATIONAL_PHRASES.length)];
+
     return await resend.emails.send({
       from,
       to: toEmail,
-      subject: `⏰ Habit Reminder: Time to master "${habitName}"`,
+      subject: `⏰ Reminder: Time for "${habitName}"`,
       html: `
         <div style="font-family: Arial, sans-serif; background-color: #0c0f17; color: #f1f5f9; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
           <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="color: #00e5ff; font-size: 24px; letter-spacing: 2px; margin: 0;">LEVELUP REMINDER</h1>
-            <p style="color: #64748b; font-size: 10px; text-transform: uppercase; margin-top: 5px;">Habit Master Alert</p>
+            <h1 style="color: #00e5ff; font-size: 24px; letter-spacing: 2px; margin: 0;">LEVELUP ALERTS</h1>
+            <p style="color: #64748b; font-size: 10px; text-transform: uppercase; margin-top: 5px;">Habit Master Engine</p>
           </div>
-          <div style="background-color: #020617; padding: 20px; border-radius: 8px; border: 1px solid #334155;">
-            <p style="font-size: 14px; color: #cbd5e1; margin-top: 0;">Hi <strong>${displayName}</strong>,</p>
-            <p style="font-size: 16px; color: #ffffff; line-height: 1.6;">
-              It is time for your scheduled habit: <span style="color: #00e5ff; font-weight: bold; font-size: 18px;">"${habitName}"</span>!
+          
+          <div style="background-color: #020617; padding: 25px; border-radius: 8px; border: 1px solid #334155; text-align: center;">
+            <p style="font-size: 14px; color: #94a3b8; margin-top: 0;">Hi <strong>${displayName}</strong>,</p>
+            
+            <p style="font-size: 18px; color: #ffffff; line-height: 1.6; font-weight: bold; margin: 15px 0;">
+              It's time to complete your habit: <br/>
+              <span style="color: #00e5ff; font-size: 22px;">"${habitName}"</span>
             </p>
-            <p style="font-size: 14px; color: #94a3b8;">
-              Keep your streak going and don't forget to check it off inside your terminal to gain XP and rank up!
-            </p>
+            
+            <div style="background-color: #0f172a; padding: 15px; border-radius: 6px; border: 1px dashed rgba(0, 229, 255, 0.3); margin: 20px 0; color: #cbd5e1; font-style: italic; font-size: 13px;">
+              "${phrase}"
+            </div>
+            
+            <div style="margin-top: 25px; margin-bottom: 10px;">
+              <a href="${websiteUrl}" style="background-color: #00e5ff; color: #020617; padding: 12px 28px; border-radius: 6px; font-weight: bold; text-decoration: none; display: inline-block; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 15px rgba(0,229,255,0.4);">
+                Check Off Habit
+              </a>
+            </div>
           </div>
-          <div style="text-align: center; margin-top: 20px; font-size: 10px; color: #475569;">
-            LEVELUP TERMINAL SYSTEM • ALL RIGHTS RESERVED
+          
+          <div style="text-align: center; margin-top: 20px; font-size: 9px; color: #475569; text-transform: uppercase; letter-spacing: 1px;">
+            This alert will snooze and repeat every 5 minutes until complete.
           </div>
         </div>
       `
