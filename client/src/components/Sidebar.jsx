@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp, RANK_COLORS } from '../context/AppContext';
 import { RankBadgeSVG } from './RankPromotion';
+import { AvatarRenderer } from './AvatarRenderer';
 import { 
   LayoutDashboard, 
   CheckSquare, 
@@ -91,11 +92,9 @@ export const Sidebar = () => {
           className={`p-4 border-b border-white/10 flex items-center gap-3 bg-slate-950/20 hover:bg-white/5 cursor-pointer transition-colors ${collapsed ? 'justify-center' : ''}`}
         >
           <div className="relative group flex items-center">
-            <img 
-              src={user.avatar} 
-              alt="Avatar" 
-              className="w-10 h-10 rounded-full border-2 border-primary/40 group-hover:border-accent/80 transition-colors"
-            />
+            <div className="w-10 h-10 rounded-full border-2 border-primary/40 group-hover:border-accent/80 transition-colors overflow-hidden flex items-center justify-center p-0.5 bg-slate-900">
+              <AvatarRenderer avatarKey={user.avatar} className="w-full h-full" />
+            </div>
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-950" />
           </div>
           

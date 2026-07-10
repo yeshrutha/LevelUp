@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { X, Copy, Download, Check, Sparkles, Trophy, Calendar, CheckSquare } from 'lucide-react';
+import { AvatarRenderer } from './AvatarRenderer';
 
 export const ShareProfileModal = () => {
   const { 
@@ -214,11 +215,9 @@ export const ShareProfileModal = () => {
         {/* Brief Stats Overview Card */}
         <div className="bg-slate-950 p-4 rounded-xl border border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img 
-              src={user.avatar} 
-              alt="Avatar" 
-              className="w-12 h-12 rounded-full border border-primary/50"
-            />
+            <div className="w-12 h-12 rounded-full border border-primary/50 overflow-hidden flex items-center justify-center p-0.5 bg-slate-900">
+              <AvatarRenderer avatarKey={user.avatar} className="w-full h-full" />
+            </div>
             <div>
               <h3 className="font-futuristic font-bold text-white text-sm">{user.displayName}</h3>
               <p className="text-[9px] uppercase tracking-wider text-slate-500 mt-0.5">Rank {user.rank}</p>

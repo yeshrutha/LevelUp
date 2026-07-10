@@ -3,27 +3,13 @@ import { useApp } from '../context/AppContext';
 import { User, Sparkles, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-// Generates exactly 25 distinct cartoon adventurer avatars
-const ADVENTURER_AVATARS = Array.from({ length: 25 }, (_, i) => {
-  const seeds = [
-    'Jack', 'Lily', 'Gizmo', 'Buster', 'Snuggles', 
-    'Spooky', 'Nala', 'Sassy', 'Cookie', 'Precious', 
-    'Shadow', 'Milo', 'Luna', 'Oliver', 'Bella',
-    'Leo', 'Lucy', 'Max', 'Daisy', 'Rocky',
-    'Charlie', 'Molly', 'Simba', 'Coco', 'Buddy'
-  ];
-  return {
-    id: `avatar_${i + 1}`,
-    name: seeds[i],
-    url: `https://api.dicebear.com/7.x/adventurer/svg?seed=${seeds[i]}`
-  };
-});
+import { CUTE_AVATARS, AvatarRenderer } from '../components/AvatarRenderer';
 
 export const EditProfile = () => {
   const { user, setUser, setCurrentTab, triggerToast } = useApp();
 
   const [newName, setNewName] = useState(user?.displayName || '');
-  const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || ADVENTURER_AVATARS[0].url);
+  const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || CUTE_AVATARS[0].id);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = (e) => {
@@ -85,11 +71,9 @@ export const EditProfile = () => {
             Avatar Preview
           </h3>
           <div className="relative">
-            <img 
-              src={selectedAvatar} 
-              alt="Selected Avatar Preview" 
-              className="w-32 h-32 rounded-full border-4 border-accent shadow-glow-accent bg-slate-900"
-            />
+            <div className="w-32 h-32 rounded-full border-4 border-accent shadow-glow-accent bg-slate-900 overflow-hidden flex items-center justify-center p-2">
+              <AvatarRenderer avatarKey={selectedAvatar} className="w-full h-full" />
+            </div>
             <div className="absolute -bottom-1 -right-1 p-1 bg-slate-950 border border-white/15 rounded-full text-accent shadow-lg animate-pulse-slow">
               <Sparkles size={16} />
             </div>
@@ -136,24 +120,20 @@ export const EditProfile = () => {
               
               {/* Grid of 25 cartoon adventurer avatars */}
               <div className="grid grid-cols-5 gap-2 max-h-[220px] overflow-y-auto pr-1 border border-white/5 bg-slate-950/60 p-2.5 rounded-lg">
-                {ADVENTURER_AVATARS.map((avatar) => {
-                  const isSelected = selectedAvatar === avatar.url;
+                {CUTE_AVATARS.map((avatar) => {
+                  const isSelected = selectedAvatar === avatar.id || selectedAvatar === avatar.url;
                   return (
                     <div 
                       key={avatar.id}
-                      onClick={() => setSelectedAvatar(avatar.url)}
-                      className={`relative aspect-square rounded-lg border-2 cursor-pointer bg-slate-900 hover:bg-slate-800 transition-all flex items-center justify-center p-1 group ${
+                      onClick={() => setSelectedAvatar(avatar.id)}
+                      className={`relative aspect-square rounded-lg border-2 cursor-pointer bg-slate-900 hover:bg-slate-800 transition-all flex items-center justify-center p-1.5 group ${
                         isSelected 
                           ? 'border-accent shadow-glow-accent scale-95' 
                           : 'border-white/5 hover:border-white/15'
                       }`}
                       title={avatar.name}
                     >
-                      <img 
-                        src={avatar.url} 
-                        alt={avatar.name} 
-                        className="w-full h-full object-contain select-none"
-                      />
+                      <AvatarRenderer avatarKey={avatar.id} className="w-full h-full" />
                       {isSelected && (
                         <div className="absolute top-0.5 right-0.5 text-accent">
                           <CheckCircle2 size={10} className="fill-slate-950" />
