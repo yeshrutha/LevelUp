@@ -13,7 +13,6 @@ import { Calendar } from './pages/Calendar';
 import { Achievements } from './pages/Achievements';
 import { NotionPage } from './pages/NotionPage';
 import { Settings } from './pages/Settings';
-import { Alerts } from './pages/Alerts';
 import AIPlanner from './pages/AIPlanner';
 import { EditProfile } from './pages/EditProfile';
 import { ShareProfileModal } from './components/ShareProfileModal';
@@ -68,7 +67,6 @@ const AppContent = () => {
       case 'analytics': return <Analytics />;
       case 'achievements': return <Achievements />;
       case 'settings': return <Settings />;
-      case 'alerts': return <Alerts />;
       case 'edit_profile': return <EditProfile />;
       default: return <Dashboard />;
     }

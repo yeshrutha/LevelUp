@@ -44,8 +44,7 @@ export const Sidebar = () => {
     { id: 'calendar', label: 'Calendar Planner', icon: CalendarIcon },
     { id: 'ai_planner', label: 'AI Planner', icon: Sparkles },
     { id: 'analytics', label: 'Analytics Suite', icon: TrendingUp },
-    { id: 'achievements', label: 'Achievements', icon: Award },
-    { id: 'alerts', label: 'Notifications', icon: Bell }
+    { id: 'achievements', label: 'Achievements', icon: Award }
   ];
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -235,8 +234,22 @@ export const Sidebar = () => {
               : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
           } ${collapsed ? 'justify-center' : ''}`}
         >
-          <Settings size={18} className={currentTab === 'settings' ? 'text-accent' : ''} />
-          {!collapsed && <span>Settings</span>}
+          <div className="relative flex items-center justify-center shrink-0">
+            <Settings size={18} className={currentTab === 'settings' ? 'text-accent' : ''} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse border border-slate-950" />
+            )}
+          </div>
+          {!collapsed && (
+            <div className="flex-1 flex items-center justify-between min-w-0">
+              <span>Settings</span>
+              {unreadCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[8px] font-bold tracking-normal leading-none shrink-0 ml-2">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+          )}
         </button>
 
         <button

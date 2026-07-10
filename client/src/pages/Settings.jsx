@@ -3,20 +3,26 @@ import { useApp } from '../context/AppContext';
 import { 
   User, Shield, Lock, Bell, Palette, Cpu, Mail, Calendar, Database, Link, 
   HelpCircle, AlertOctagon, Terminal, Globe, Clock, Plus, Trash2, Eye, EyeOff, 
-  ShieldCheck, Check, Power, RefreshCw, Activity, Layers, Play, CheckSquare, Sparkles, ChevronDown, Settings as SettingsIcon
+  ShieldCheck, Check, Power, RefreshCw, Activity, Layers, Play, CheckSquare, Sparkles, ChevronDown, Settings as SettingsIcon,
+  Volume2, VolumeX, Zap, Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CUTE_AVATARS, AvatarRenderer } from '../components/AvatarRenderer';
 
 export const Settings = () => {
   const { 
     user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, 
-    setCurrentTab, triggerToast, setNotifications, sendVerificationCode, 
-    verifyEmailCode, verifyPassword 
+    setCurrentTab, triggerToast, notifications, setNotifications, 
+    markAllNotificationsRead, purgeAllNotifications, isMuted, setIsMuted, 
+    playAlertSound, sendVerificationCode, verifyEmailCode, verifyPassword 
   } = useApp();
 
   // Active Category selection
   const [activeTab, setActiveTab] = useState('account');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Notifications Filter state
+  const [activeFilter, setActiveFilter] = useState('all');
 
   // --- LOCAL STATES ---
   // Account Form
@@ -27,6 +33,7 @@ export const Settings = () => {
   const [bio, setBio] = useState(user?.settings?.bio || '');
   const [country, setCountry] = useState(user?.settings?.country || 'India');
   const [timezone, setTimezone] = useState(user?.settings?.timezone || 'GMT+5:30');
+  const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || CUTE_AVATARS[0].id);
 
   // Security Form
   const [currentPassword, setCurrentPassword] = useState('');
@@ -62,17 +69,6 @@ export const Settings = () => {
   const [timeFormat, setTimeFormat] = useState(settings.timeFormat || '12h');
   const [weekStartsOn, setWeekStartsOn] = useState(settings.weekStartsOn || 'Monday');
   const [defaultLandingPage, setDefaultLandingPage] = useState(settings.defaultLandingPage || 'Dashboard');
-
-  // Notification states
-  const [browserNotifications, setBrowserNotifications] = useState(settings.browserNotifications !== false);
-  const [emailNotifications, setEmailNotifications] = useState(settings.emailNotifications !== false);
-  const [dailyReminder, setDailyReminder] = useState(settings.dailyReminder !== false);
-  const [weeklyReport, setWeeklyReport] = useState(settings.weeklyReport !== false);
-  const [achievementNotifications, setAchievementNotifications] = useState(settings.achievementNotifications !== false);
-  const [interviewReminder, setInterviewReminder] = useState(settings.interviewReminder !== false);
-  const [deadlineReminder, setDeadlineReminder] = useState(settings.deadlineReminder !== false);
-  const [reminderTime, setReminderTime] = useState(settings.reminderTime || '09:00');
-  const [reminderDays, setReminderDays] = useState(settings.reminderDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
 
   // Developer mode
   const [devMode, setDevMode] = useState(settings.devModeEnabled === true);
@@ -138,6 +134,7 @@ export const Settings = () => {
         ...prev,
         displayName: displayName.trim(),
         email: editEmail.trim(),
+        avatar: selectedAvatar,
         emailVerified: isEmailStillVerified,
         settings: {
           ...(prev.settings || {}),
@@ -193,7 +190,6 @@ export const Settings = () => {
     }
 
     setSecurityLoading(true);
-    // Call server update password logic
     try {
       const verifyRes = await verifyPassword(currentPassword);
       if (!verifyRes.success) {
@@ -222,36 +218,7 @@ export const Settings = () => {
     setSecurityLoading(false);
   };
 
-  // Test dispatches
-  const triggerTestNotification = () => {
-    if ('Notification' in window) {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          new Notification('LevelUp System Alert', {
-            body: 'Telemetry synchronization successfully validated.',
-            icon: '/favicon.svg'
-          });
-        } else {
-          triggerToast('System Alert', 'Telemetry synchronization successfully validated.', 'success');
-        }
-      });
-    } else {
-      triggerToast('System Alert', 'Telemetry synchronization successfully validated.', 'success');
-    }
-  };
-
-  const triggerTestEmail = async () => {
-    triggerToast('Email Dispatched', 'Simulated SMTP verification triggered via Resend.', 'success');
-    try {
-      await fetch('http://localhost:5000/api/auth/send-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email })
-      });
-    } catch(e) {}
-  };
-
-  // JSON download
+  // Download User data JSON
   const downloadUserData = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(user, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -298,12 +265,10 @@ export const Settings = () => {
         return;
       }
 
-      // Execute Action
       setShowConfirmModal(false);
       if (confirmAction === 'reset') {
         resetSystem();
       } else if (confirmAction === 'delete_data') {
-        // Purge settings/lists but keep basic account
         setUser(prev => ({
           email: prev.email,
           displayName: prev.displayName,
@@ -317,7 +282,6 @@ export const Settings = () => {
         }));
         triggerToast('Telemetry Cleared', 'All tasks, habits, and timeline custom pages have been deleted.', 'success');
       } else if (confirmAction === 'delete_account') {
-        // Clear all database records and log out
         try {
           await fetch('http://localhost:5000/api/system/reset-db', {
             method: 'POST',
@@ -347,6 +311,7 @@ export const Settings = () => {
   ];
 
   const activeCategory = categories.find(c => c.id === activeTab) || categories[0];
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <div className="space-y-6 pb-12 select-none max-w-5xl mx-auto px-4 font-display">
@@ -400,6 +365,11 @@ export const Settings = () => {
               >
                 <CatIcon size={14} className={activeTab === cat.id ? 'text-accent' : 'text-slate-500'} />
                 <span>{cat.label}</span>
+                {cat.id === 'notifications' && unreadCount > 0 && (
+                  <span className="ml-auto px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[8px] font-bold tracking-normal leading-none shrink-0">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -414,6 +384,11 @@ export const Settings = () => {
             <span className="flex items-center gap-2">
               <activeCategory.icon size={14} className="text-accent" />
               {activeCategory.label}
+              {activeCategory.id === 'notifications' && unreadCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-[8px] font-bold leading-none">
+                  {unreadCount}
+                </span>
+              )}
             </span>
             <ChevronDown size={14} className={`transition-transform ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -440,6 +415,11 @@ export const Settings = () => {
                     >
                       <cat.icon size={11} />
                       <span>{cat.label}</span>
+                      {cat.id === 'notifications' && unreadCount > 0 && (
+                        <span className="ml-auto px-1 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-[7px] font-bold leading-none">
+                          {unreadCount}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -468,26 +448,41 @@ export const Settings = () => {
                     </h3>
                   </div>
 
-                  {/* Profile Picture Generation */}
-                  <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-950/40 p-4 rounded-xl border border-white/5">
-                    <img 
-                      src={user?.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(displayName || 'Jack')}`} 
-                      alt="User Avatar"
-                      className="w-16 h-16 rounded-xl border border-white/20 object-cover"
-                    />
-                    <div className="text-center sm:text-left space-y-1">
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-300">Profile avatar seeds</h4>
-                      <p className="text-[9px] text-slate-500">Dicebear adventurer seeds are auto-generated from your display name.</p>
-                      <button
-                        onClick={() => {
-                          const seed = Math.random().toString(36).substring(7);
-                          setUser(prev => ({ ...prev, avatar: `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}` }));
-                          triggerToast('Avatar Generated', 'Dicebear robot vector updated.', 'success');
-                        }}
-                        className="text-[9px] font-bold text-accent uppercase tracking-widest hover:underline mt-1 bg-transparent border-0 cursor-pointer block"
-                      >
-                        ⚡ Generate Random Seed
-                      </button>
+                  {/* Profile Picture Selection */}
+                  <div className="flex flex-col sm:flex-row items-start gap-5 bg-slate-950/45 p-4 rounded-xl border border-white/5">
+                    <div className="flex flex-col items-center gap-2 shrink-0 self-center sm:self-start">
+                      <h4 className="text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-widest">Avatar Preview</h4>
+                      <div className="w-16 h-16 rounded-xl border border-accent shadow-glow-accent bg-slate-900 overflow-hidden flex items-center justify-center p-1.5">
+                        <AvatarRenderer avatarKey={selectedAvatar} className="w-full h-full" />
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1 space-y-2 text-left w-full">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-300 font-futuristic">Select Cartoon Adventurer</h4>
+                      <div className="grid grid-cols-5 sm:grid-cols-7 gap-2 max-h-[140px] overflow-y-auto pr-1 border border-white/5 bg-slate-900/40 p-2 rounded-lg">
+                        {CUTE_AVATARS.map((avatar) => {
+                          const isSelected = selectedAvatar === avatar.id || selectedAvatar === avatar.url;
+                          return (
+                            <div 
+                              key={avatar.id}
+                              onClick={() => setSelectedAvatar(avatar.id)}
+                              className={`relative aspect-square rounded-lg border-2 cursor-pointer bg-slate-950 hover:bg-slate-900 transition-all flex items-center justify-center p-1.5 ${
+                                isSelected 
+                                  ? 'border-accent shadow-glow-accent scale-95' 
+                                  : 'border-white/5 hover:border-white/15'
+                              }`}
+                              title={avatar.name}
+                            >
+                              <AvatarRenderer avatarKey={avatar.id} className="w-full h-full" />
+                              {isSelected && (
+                                <div className="absolute top-0.5 right-0.5 text-accent text-[8px] font-bold leading-none">
+                                  ✓
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
@@ -694,105 +689,230 @@ export const Settings = () => {
                 </div>
               )}
 
-              {/* Notifications Category */}
+              {/* Notifications Category (Full Notifications manager from Alerts.jsx) */}
               {activeTab === 'notifications' && (
                 <div className="space-y-6">
-                  <div className="border-b border-white/5 pb-3">
-                    <h3 className="text-xs font-futuristic font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
-                      <Bell size={14} className="text-accent" /> Telemetry Alert Configurations
-                    </h3>
+                  {/* Header bar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+                    <div>
+                      <h3 className="text-xs font-futuristic font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                        <Bell className="text-accent animate-pulse" size={14} />
+                        Notifications Center
+                      </h3>
+                      <p className="text-[9px] uppercase tracking-widest text-slate-500 mt-1">
+                        System notifications, audio settings, and activity tracking logs
+                      </p>
+                    </div>
+
+                    {/* Controls */}
+                    <div className="flex items-center gap-2 self-start sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMuted(prev => !prev);
+                          triggerToast('Audio Settings', !isMuted ? 'Notification sounds muted' : 'Audio alerts active', 'success');
+                        }}
+                        className={`p-1.5 rounded border transition-all cursor-pointer flex items-center justify-center ${
+                          isMuted 
+                            ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' 
+                            : 'bg-slate-950 border-white/5 text-slate-400 hover:text-white'
+                        }`}
+                        title={isMuted ? "Unmute Sounds" : "Mute Sounds"}
+                      >
+                        {isMuted ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          markAllNotificationsRead();
+                          triggerToast('Alerts Center', 'All alerts marked as read', 'success');
+                        }}
+                        disabled={notifications.filter(n => !n.read).length === 0}
+                        className="px-2.5 py-1.5 bg-slate-950 border border-white/5 text-slate-400 hover:text-white disabled:opacity-40 disabled:pointer-events-none rounded text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <CheckSquare size={10} />
+                        Mark Read
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          purgeAllNotifications();
+                          triggerToast('Notifications Center', 'Workspace notifications deleted successfully', 'success');
+                        }}
+                        disabled={notifications.length === 0}
+                        className="px-2.5 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 disabled:opacity-40 disabled:pointer-events-none rounded text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Trash2 size={10} />
+                        Delete Log
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Switch fields */}
-                    {[
-                      { id: 'browser', label: 'Browser Notifications', state: browserNotifications, setter: setBrowserNotifications },
-                      { id: 'email', label: 'Email Notifications', state: emailNotifications, setter: setEmailNotifications },
-                      { id: 'daily', label: 'Daily Reminders (Tasks)', state: dailyReminder, setter: setDailyReminder },
-                      { id: 'weekly', label: 'Weekly Progress Reports', state: weeklyReport, setter: setWeeklyReport },
-                      { id: 'achievement', label: 'Achievement Notifications', state: achievementNotifications, setter: setAchievementNotifications },
-                      { id: 'interview', label: 'Interview Mock Alerts', state: interviewReminder, setter: setInterviewReminder },
-                      { id: 'deadline', label: 'Deadline & Timeline Warnings', state: deadlineReminder, setter: setDeadlineReminder }
-                    ].map((notif) => (
-                      <div key={notif.id} className="p-4 bg-slate-950/30 border border-white/5 rounded-xl flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">{notif.label}</span>
-                        <button
+                  {/* KPI Counters Grid */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="glass-panel p-3 rounded-xl relative overflow-hidden bg-slate-950/20 border border-white/5 text-left">
+                      <span className="text-[8px] uppercase font-futuristic text-slate-500 tracking-widest block mb-0.5">Total</span>
+                      <span className="text-lg font-black text-white">{notifications.length}</span>
+                    </div>
+
+                    <div className="glass-panel p-3 rounded-xl relative overflow-hidden bg-slate-950/20 border border-white/5 text-left">
+                      <span className="text-[8px] uppercase font-futuristic text-slate-500 tracking-widest block mb-0.5">Unread</span>
+                      <span className={`text-lg font-black ${notifications.filter(n => !n.read).length > 0 ? 'text-rose-400 animate-pulse' : 'text-slate-400'}`}>
+                        {notifications.filter(n => !n.read).length}
+                      </span>
+                    </div>
+
+                    <div className="glass-panel p-3 rounded-xl relative overflow-hidden bg-slate-950/20 border border-white/5 text-left">
+                      <span className="text-[8px] uppercase font-futuristic text-slate-500 tracking-widest block mb-0.5">Audio</span>
+                      <span className="text-[10px] font-black text-cyan-400 mt-1 block tracking-wider">{isMuted ? 'MUTED' : 'ACTIVE'}</span>
+                    </div>
+                  </div>
+
+                  {/* Sound Effects Test Bench */}
+                  <div className="glass-panel p-4 rounded-xl relative overflow-hidden border border-white/10 text-left bg-slate-900/10">
+                    <h4 className="text-[10px] font-black font-futuristic uppercase tracking-widest text-slate-200 mb-2 flex items-center gap-1.5">
+                      <Terminal size={12} className="text-accent" />
+                      Sound Effects Test Bench
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {[
+                        { id: 'success', label: 'Success Chime', sub: 'Dual Sine frequency riser' },
+                        { id: 'xp', label: 'XP Progress Chord', sub: 'Ascending melody chord' },
+                        { id: 'rank', label: 'Rank Promotion Fanfare', sub: 'Cinematic fanfare' }
+                      ].map(sound => (
+                        <div
+                          key={sound.id}
                           onClick={() => {
-                            const next = !notif.state;
-                            notif.setter(next);
-                            handleSaveSettings({ [notif.id + 'Notifications']: next });
+                            playAlertSound(sound.id, true);
+                            triggerToast(sound.label, 'Audio frequency chime synthesized.', 'success');
                           }}
-                          className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
-                            notif.state ? 'bg-primary justify-end shadow-glow-accent' : 'bg-slate-800 justify-start'
+                          className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 hover:bg-slate-900 border border-white/5 cursor-pointer"
+                        >
+                          <div>
+                            <span className="text-[9px] font-bold font-futuristic text-white block uppercase tracking-wider">{sound.label}</span>
+                            <span className="text-[8px] text-slate-500 block uppercase font-mono mt-0.5">{sound.sub}</span>
+                          </div>
+                          <Play size={8} className="text-accent fill-accent shrink-0" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Filter Tabs */}
+                  <div className="flex gap-1 border-b border-white/5 pb-0.5 overflow-x-auto whitespace-nowrap scrollbar-none">
+                    {['all', 'xp', 'rank', 'calendar', 'system'].map((filterType) => {
+                      const filterLabels = {
+                        all: 'All Notifications',
+                        xp: 'XP Logs',
+                        rank: 'Rank Upgrades',
+                        calendar: 'Calendar Logs',
+                        system: 'System Logs'
+                      };
+                      const isActive = activeFilter === filterType;
+                      return (
+                        <button
+                          key={filterType}
+                          type="button"
+                          onClick={() => setActiveFilter(filterType)}
+                          className={`px-3 py-1.5 border-b-2 text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all ${
+                            isActive 
+                              ? 'border-accent text-white bg-slate-950/20' 
+                              : 'border-transparent text-slate-500 hover:text-slate-300'
                           }`}
                         >
-                          <div className="w-4 h-4 rounded-full bg-white" />
+                          {filterLabels[filterType]}
                         </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
-                  {/* Time picker & Days selection */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/5 pt-4">
-                    <div className="space-y-1">
-                      <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Reminder Execution Time</label>
-                      <input
-                        type="time"
-                        value={reminderTime}
-                        onChange={(e) => {
-                          setReminderTime(e.target.value);
-                          handleSaveSettings({ reminderTime: e.target.value });
-                        }}
-                        className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
-                      />
-                    </div>
+                  {/* Alerts Logs List */}
+                  <div className="space-y-2">
+                    <AnimatePresence mode="popLayout">
+                      {notifications.filter(n => activeFilter === 'all' ? true : n.type === activeFilter).length === 0 ? (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="p-6 rounded-xl border border-white/5 bg-slate-950/20 flex flex-col items-center justify-center text-center space-y-2"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-slate-950 border border-white/10 flex items-center justify-center text-slate-600">
+                            <Terminal size={14} />
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-bold font-futuristic text-slate-300 uppercase tracking-widest block">No Telemetry Logged</span>
+                            <span className="text-[8px] text-slate-500 uppercase tracking-wider block mt-0.5">Complete habits or milestones to generate logs</span>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        notifications
+                          .filter(n => activeFilter === 'all' ? true : n.type === activeFilter)
+                          .map((notif, idx) => {
+                            const isUnread = !notif.read;
+                            const markReadSingle = () => {
+                              setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+                            };
+                            
+                            const getAlertIcon = (type) => {
+                              switch (type) {
+                                case 'xp': return <Zap size={12} className="text-amber-400" />;
+                                case 'rank': return <Award size={12} className="text-rose-500" />;
+                                case 'calendar': return <Calendar size={12} className="text-cyan-400" />;
+                                default: return <Terminal size={12} className="text-slate-400" />;
+                              }
+                            };
 
-                    <div className="space-y-1">
-                      <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Reminder Active Days</label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
-                          const isSelected = reminderDays.includes(day);
-                          return (
-                            <button
-                              key={day}
-                              onClick={() => {
-                                let next = [...reminderDays];
-                                if (isSelected) {
-                                  next = next.filter(d => d !== day);
-                                } else {
-                                  next.push(day);
-                                }
-                                setReminderDays(next);
-                                handleSaveSettings({ reminderDays: next });
-                              }}
-                              className={`px-2 py-1 text-[8px] font-bold uppercase rounded border transition-colors cursor-pointer ${
-                                isSelected 
-                                  ? 'bg-primary/20 border-accent text-accent' 
-                                  : 'bg-transparent border-white/10 text-slate-500 hover:text-slate-300'
-                              }`}
-                            >
-                              {day}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                            const getAlertBgGlow = (type) => {
+                              switch (type) {
+                                case 'xp': return 'border-amber-500/20 bg-amber-500/[0.02] hover:border-amber-500/35';
+                                case 'rank': return 'border-rose-500/20 bg-rose-500/[0.02] hover:border-rose-500/35';
+                                case 'calendar': return 'border-cyan-500/20 bg-cyan-500/[0.02] hover:border-cyan-500/35';
+                                default: return 'border-white/5 bg-slate-900/50 hover:border-white/10';
+                              }
+                            };
 
-                  {/* Test alert triggers */}
-                  <div className="flex gap-3 border-t border-white/5 pt-4">
-                    <button
-                      onClick={triggerTestNotification}
-                      className="px-4 py-2 border border-white/10 hover:border-accent text-slate-200 hover:text-accent font-futuristic font-bold text-[9px] uppercase tracking-widest rounded transition-colors cursor-pointer"
-                    >
-                      Test Push alert
-                    </button>
-                    <button
-                      onClick={triggerTestEmail}
-                      className="px-4 py-2 bg-slate-800 border border-white/10 hover:border-accent text-slate-200 hover:text-accent font-futuristic font-bold text-[9px] uppercase tracking-widest rounded transition-colors cursor-pointer"
-                    >
-                      Test SMTP Email
-                    </button>
+                            return (
+                              <motion.div
+                                key={notif.id}
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.2, delay: Math.min(idx * 0.03, 0.3) }}
+                                onClick={markReadSingle}
+                                className={`p-3 rounded-xl border flex items-start justify-between gap-3 cursor-pointer text-left transition-all ${getAlertBgGlow(notif.type)} ${
+                                  isUnread ? 'border-l-[3px] border-l-accent' : ''
+                                }`}
+                              >
+                                <div className="flex items-start gap-2.5">
+                                  <div className="w-6.5 h-6.5 rounded-lg bg-slate-950 border border-white/10 flex items-center justify-center shrink-0">
+                                    {getAlertIcon(notif.type)}
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className={`text-[11px] font-black uppercase tracking-wider ${isUnread ? 'text-white' : 'text-slate-400'}`}>
+                                        {notif.title}
+                                      </h4>
+                                      {isUnread && (
+                                        <span className="px-1 py-0.5 rounded bg-accent/15 border border-accent/25 text-accent text-[6px] font-bold uppercase tracking-wider leading-none">
+                                          Unread
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[9px] text-slate-400 uppercase tracking-widest font-display leading-normal">
+                                      {notif.body}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest shrink-0 mt-0.5 font-futuristic">
+                                  {notif.time}
+                                </span>
+                              </motion.div>
+                            );
+                          })
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               )}
@@ -1020,16 +1140,6 @@ export const Settings = () => {
                           <option>Daily Digest</option>
                           <option>Weekly Digest</option>
                         </select>
-                      </div>
-
-                      <div className="space-y-2 flex flex-col justify-end">
-                        <button
-                          type="button"
-                          onClick={triggerTestEmail}
-                          className="w-full py-2 bg-slate-800 border border-white/10 hover:border-accent text-slate-200 hover:text-accent font-futuristic font-bold text-[9px] uppercase tracking-widest rounded transition-colors cursor-pointer"
-                        >
-                          Send Test Telemetry Alert
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -1359,7 +1469,7 @@ export const Settings = () => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Developer console panel (Only shown when Dev Mode is active) */}
+          {/* Developer console panel */}
           <AnimatePresence>
             {devMode && (
               <motion.div
