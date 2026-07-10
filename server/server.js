@@ -996,12 +996,42 @@ app.post('/api/ai/coach', async (req, res) => {
   const { message, stats, email, displayName } = req.body;
   const userEmail = req.user?.email || email || 'User';
 
+  let aiPersonality = 'Friendly Coach';
+  let responseLength = 'Short';
+
+  try {
+    const user = await UserData.findOne({ email: userEmail.toLowerCase() });
+    if (user && user.profile?.settings) {
+      aiPersonality = user.profile.settings.aiPersonality || 'Friendly Coach';
+      responseLength = user.profile.settings.responseLength || 'Short';
+    }
+  } catch (dbErr) {
+    console.warn('⚠️ AI Coach Router: User settings fetch failed, using defaults.', dbErr.message);
+  }
+
+  // Determine personality system instructions
+  let personalityPrompt = 'Be warm, supportive, but disciplined.';
+  if (aiPersonality === 'Strict Coach') {
+    personalityPrompt = 'Adopt the persona of a tough, strict, direct, and no-excuses coach. Be authoritative and hold the user to high standards.';
+  } else if (aiPersonality === 'Mentor') {
+    personalityPrompt = 'Adopt the persona of a wise, experienced mentor. Provide thoughtful, strategic, calm, and career-oriented advice.';
+  }
+
+  // Determine response length system instructions
+  let lengthPrompt = 'strictly under 3 sentences';
+  if (responseLength === 'Short') {
+    lengthPrompt = 'extremely brief (strictly 1 or 2 sentences)';
+  } else if (responseLength === 'Detailed') {
+    lengthPrompt = 'detailed, comprehensive, and structured (around 4-6 sentences)';
+  }
+
   const systemInstruction = `
     You are the "LevelUp AI Coach", a strategic, motivational advisor in a Habit Mastery Terminal workspace.
     The user is attempting to build productive habits, keep up day streaks, and complete custom timelines.
-    Provide constructive, direct, action-oriented suggestions (strictly under 3 sentences).
+    ${personalityPrompt}
+    Provide constructive, direct, action-oriented suggestions. Keep your response ${lengthPrompt}.
     Active user metrics: readiness completion index: ${stats?.readiness || 0}%, active streak: ${stats?.streak || 0} days, user email: ${userEmail}.
-    Always encourage consistency. Be warm, supportive, but disciplined.
+    Always encourage consistency.
   `;
 
   try {
