@@ -88,6 +88,35 @@ export const Settings = () => {
   const [confirmError, setConfirmError] = useState('');
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [supportMsg, setSupportMsg] = useState('');
+  const [supportLoading, setSupportLoading] = useState(false);
+
+  const handleSupportSubmit = async (e) => {
+    e.preventDefault();
+    if (!supportMsg.trim()) return;
+    setSupportLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/support/ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          displayName: user.displayName,
+          message: supportMsg.trim()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        triggerToast('Error', data.error || 'Failed to submit ticket.', 'error');
+      } else {
+        triggerToast('Ticket Submitted', 'Developer notified. Confirmation email dispatched.', 'success');
+        setSupportMsg('');
+      }
+    } catch (err) {
+      triggerToast('Error', 'Failed to connect: ' + err.message, 'error');
+    }
+    setSupportLoading(false);
+  };
 
   // Fluctuate dev latency counter slightly
   useEffect(() => {
@@ -1294,16 +1323,26 @@ export const Settings = () => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-4 bg-slate-950/40 border border-white/5 rounded-xl space-y-2 text-left">
-                      <h4 className="text-[10px] font-bold text-white uppercase font-futuristic">Support Tickets</h4>
-                      <p className="text-[9px] text-slate-500 leading-normal font-display">Encountering problems syncing Resend email dispatches, database schemas or AI models?</p>
+                    <form onSubmit={handleSupportSubmit} className="p-4 bg-slate-950/40 border border-white/5 rounded-xl space-y-3 text-left">
+                      <h4 className="text-[10px] font-bold text-white uppercase font-futuristic">Support & Feedback</h4>
+                      <p className="text-[8px] text-slate-500 leading-normal font-display uppercase tracking-wider">
+                        Encountering problems? Submit your request directly to the development team.
+                      </p>
+                      <textarea
+                        required
+                        value={supportMsg}
+                        onChange={(e) => setSupportMsg(e.target.value)}
+                        placeholder="Describe your issue or provide feedback here..."
+                        className="w-full bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-[10px] text-white focus:outline-none focus:border-cyan-500/40 h-20 resize-none font-display"
+                      />
                       <button
-                        onClick={() => triggerToast('Ticket Created', 'Support log generated. Help desk notified.', 'success')}
-                        className="text-[9px] font-bold text-accent uppercase tracking-wider hover:underline bg-transparent border-0 cursor-pointer block"
+                        type="submit"
+                        disabled={supportLoading || !supportMsg.trim()}
+                        className="px-3.5 py-1.5 bg-gradient-to-r from-primary to-accent hover:from-primary-light hover:to-accent-light text-slate-950 font-futuristic font-bold text-[9px] uppercase tracking-widest rounded shadow hover:shadow-glow-accent cursor-pointer transition-all active:scale-95 disabled:opacity-50"
                       >
-                        ⚡ Contact Help Desk
+                        {supportLoading ? 'Submitting...' : '⚡ Submit Support Ticket'}
                       </button>
-                    </div>
+                    </form>
 
                     <div className="p-4 bg-slate-950/40 border border-white/5 rounded-xl space-y-2 text-left">
                       <h4 className="text-[10px] font-bold text-white uppercase font-futuristic">Resource Hubs</h4>

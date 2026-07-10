@@ -839,6 +839,27 @@ app.post('/api/auth/verify-password', authRateLimiter, async (req, res) => {
   }
 });
 
+// POST Submit Support Ticket & Dispatch Emails
+app.post('/api/support/ticket', async (req, res) => {
+  const { email, displayName, message } = req.body;
+  if (!email || !displayName || !message) {
+    return res.status(400).json({ error: 'All fields are required.' });
+  }
+
+  try {
+    // Send confirmation to user
+    await EmailService.sendSupportTicketConfirmation(email.trim(), displayName.trim(), message.trim());
+    
+    // Notify developers
+    await EmailService.sendDeveloperTicketNotification(email.trim(), displayName.trim(), message.trim());
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Support Ticket Email: Failed to dispatch:', err.message);
+    return res.status(500).json({ error: 'Failed to process support ticket: ' + err.message });
+  }
+});
+
 // --- AI Assistant Integration (NVIDIA AI with Gemini Fallback) ---
 const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
   const nvidiaKey = process.env.NVIDIA_API_KEY;

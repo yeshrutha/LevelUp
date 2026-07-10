@@ -173,6 +173,51 @@ export const EmailService = {
           <p>Visit your achievement catalog inside LevelUp to view unlocked badges.</p>
         </div>
       `
+  },
+
+  sendSupportTicketConfirmation: async (toEmail, displayName, message) => {
+    const resend = getResendInstance();
+    const from = getFromEmail();
+    return await resend.emails.send({
+      from,
+      to: toEmail,
+      subject: '🎟️ LevelUp Support: Ticket Received',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #1e293b; border-radius: 10px; background-color: #030712; color: #f3f4f6;">
+          <h2 style="color: #00e5ff; margin-top: 0; text-transform: uppercase; font-family: monospace;">🎟️ Support Ticket Acknowledged</h2>
+          <p>Hello ${displayName},</p>
+          <p>We apologize for the issues faced and we will resolve it for you and thank you for approaching us.</p>
+          <div style="background-color: #0b0f19; border: 1px solid #1e293b; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <strong style="color: #9ca3af; font-size: 11px; text-transform: uppercase; font-family: monospace; display: block; margin-bottom: 5px;">Your Message:</strong>
+            <span style="font-size: 13px; color: #f3f4f6;">${message}</span>
+          </div>
+          <p>Regards,<br /><strong>LevelUp Team</strong></p>
+          <hr style="border-color: #1e293b; margin: 20px 0;" />
+          <p style="font-size: 11px; color: #9ca3af; line-height: 1.5;">LevelUp automated ticket tracking systems.</p>
+        </div>
+      `
+    });
+  },
+
+  sendDeveloperTicketNotification: async (fromUserEmail, fromUserName, message) => {
+    const resend = getResendInstance();
+    const from = getFromEmail();
+    return await resend.emails.send({
+      from,
+      to: from,
+      subject: `🚨 LevelUp SUPPORT: New Ticket from ${fromUserName}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e11d48; border-radius: 10px; background-color: #030712; color: #f3f4f6;">
+          <h2 style="color: #e11d48; margin-top: 0; text-transform: uppercase; font-family: monospace;">🚨 New Developer Alert</h2>
+          <p>A new support request has been logged by a user:</p>
+          <div style="background-color: #0b0f19; border: 1px solid #e11d48; padding: 15px; border-radius: 8px; margin: 20px 0; font-size: 13px;">
+            <div><strong>User:</strong> ${fromUserName} (${fromUserEmail})</div>
+            <div style="margin-top: 10px;"><strong>Issue/Feedback:</strong></div>
+            <div style="margin-top: 5px; color: #cbd5e1; font-style: italic; white-space: pre-wrap;">${message}</div>
+          </div>
+          <p style="font-size: 11px; color: #9ca3af; line-height: 1.5;">LevelUp automated notification engine.</p>
+        </div>
+      `
     });
   }
 };
