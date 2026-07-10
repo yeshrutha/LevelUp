@@ -12,7 +12,9 @@ import {
   ChevronRight,
   LogOut,
   Settings,
-  Sparkles
+  Sparkles,
+  User,
+  Share2
 } from 'lucide-react';
 
 export const Sidebar = () => {
@@ -24,13 +26,16 @@ export const Sidebar = () => {
     markAllNotificationsRead,
     logoutUser,
     customPages,
-    createCustomPage
+    createCustomPage,
+    showShareModal,
+    setShowShareModal
   } = useApp();
 
   if (!user) return null;
   
   const [collapsed, setCollapsed] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -80,24 +85,55 @@ export const Sidebar = () => {
       </div>
 
       {/* User Mini Profile */}
-      <div className={`p-4 border-b border-white/10 flex items-center gap-3 bg-slate-950/20 ${collapsed ? 'justify-center' : ''}`}>
-        <div className="relative group">
-          <img 
-            src={user.avatar} 
-            alt="Avatar" 
-            className="w-10 h-10 rounded-full border-2 border-primary/40 group-hover:border-accent/80 transition-colors"
-          />
-          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-950" />
-        </div>
-        
-        {!collapsed && (
-          <div className="flex-1 min-w-0">
-            <h4 className="font-display font-semibold text-sm text-slate-100 truncate">{user.displayName}</h4>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[10px] uppercase font-futuristic text-cyan-400 font-medium">Lvl {user.level}</span>
-              <span className="text-slate-600 text-[10px]">•</span>
-              <span className="text-[10px] font-semibold text-slate-400 font-display truncate max-w-[80px]">{user.rank}</span>
+      <div className="relative">
+        <div 
+          onClick={() => setShowProfileMenu(prev => !prev)}
+          className={`p-4 border-b border-white/10 flex items-center gap-3 bg-slate-950/20 hover:bg-white/5 cursor-pointer transition-colors ${collapsed ? 'justify-center' : ''}`}
+        >
+          <div className="relative group flex items-center">
+            <img 
+              src={user.avatar} 
+              alt="Avatar" 
+              className="w-10 h-10 rounded-full border-2 border-primary/40 group-hover:border-accent/80 transition-colors"
+            />
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-950" />
+          </div>
+          
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <h4 className="font-display font-semibold text-sm text-slate-100 truncate">{user.displayName}</h4>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] uppercase font-futuristic text-cyan-400 font-medium">Lvl {user.level}</span>
+                <span className="text-slate-600 text-[10px]">•</span>
+                <span className="text-[10px] font-semibold text-slate-400 font-display truncate max-w-[80px]">{user.rank}</span>
+              </div>
             </div>
+          )}
+        </div>
+
+        {/* Floating Context Dropdown Option List */}
+        {showProfileMenu && (
+          <div className="absolute bottom-16 left-4 w-52 bg-slate-900 border border-white/10 rounded-xl p-1.5 shadow-2xl z-50 space-y-0.5 animate-fade-in">
+            <button
+              onClick={() => {
+                setCurrentTab('edit_profile');
+                setShowProfileMenu(false);
+              }}
+              className="w-full text-left px-3 py-2 hover:bg-white/5 rounded-lg text-[10px] uppercase font-bold tracking-wider font-futuristic text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-2.5"
+            >
+              <User size={13} className="text-accent" />
+              Edit Profile
+            </button>
+            <button
+              onClick={() => {
+                setShowShareModal(true);
+                setShowProfileMenu(false);
+              }}
+              className="w-full text-left px-3 py-2 hover:bg-white/5 rounded-lg text-[10px] uppercase font-bold tracking-wider font-futuristic text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-2.5"
+            >
+              <Share2 size={13} className="text-primary" />
+              Share Profile
+            </button>
           </div>
         )}
       </div>

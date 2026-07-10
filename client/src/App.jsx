@@ -15,6 +15,8 @@ import { NotionPage } from './pages/NotionPage';
 import { Settings } from './pages/Settings';
 import { Alerts } from './pages/Alerts';
 import AIPlanner from './pages/AIPlanner';
+import { EditProfile } from './pages/EditProfile';
+import { ShareProfileModal } from './components/ShareProfileModal';
 
 // Toast Notification Item
 const ToastItem = ({ toast }) => {
@@ -67,6 +69,7 @@ const AppContent = () => {
       case 'achievements': return <Achievements />;
       case 'settings': return <Settings />;
       case 'alerts': return <Alerts />;
+      case 'edit_profile': return <EditProfile />;
       default: return <Dashboard />;
     }
   };
@@ -109,6 +112,9 @@ const AppContent = () => {
 
       {/* Full-screen cinematic Rank Promotion Overlay popup */}
       <RankPromotion />
+
+      {/* Share profile credentials portal */}
+      <ShareProfileModal />
     </div>
   );
 };

@@ -127,7 +127,7 @@ let localDB = {};
 const createUserProfile = (email, name = '') => ({
   displayName: name || email.split('@')[0],
   email,
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
+  avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Jack',
   xp: 0,
   level: 1,
   rank: 'Iron I',

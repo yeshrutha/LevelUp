@@ -149,6 +149,9 @@ export const AppProvider = ({ children }) => {
   // Floating Toasts Queue
   const [toasts, setToasts] = useState([]);
 
+  // Share profile modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+
   // Audio mute triggers
   const [isMuted, setIsMuted] = useState(() => {
     return localStorage.getItem('levelup_sound_muted') === 'true';
@@ -351,6 +354,7 @@ export const AppProvider = ({ children }) => {
         const freshUser = {
           displayName: name,
           email: emailKey,
+          avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Jack',
           level: 1,
           xp: 0,
           rank: 'Iron I',
@@ -945,7 +949,8 @@ export const AppProvider = ({ children }) => {
       customPages, createCustomPage, updateCustomPage, deleteCustomPage, togglePageTask,
       themeMode, setThemeMode: changeThemeMode,
       toasts, triggerToast,
-      isMuted, setIsMuted: changeMuteState
+      isMuted, setIsMuted: changeMuteState,
+      showShareModal, setShowShareModal
     }}>
       {children}
     </AppContext.Provider>
