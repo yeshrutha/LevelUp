@@ -74,39 +74,20 @@ const AppContent = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-darkbg text-slate-100 select-none overflow-hidden relative">
+    <div className="flex h-screen w-screen bg-darkbg text-slate-100 select-none overflow-hidden relative">
+      {/* Sidebar Navigation */}
+      <Sidebar />
+
+      {/* Main Content Workspace viewport */}
+      <main className="flex-1 overflow-y-auto px-6 md:px-10 py-8 relative">
+        {renderActivePage()}
+      </main>
       
-      {/* Mock Desktop Window Frame controls */}
-      <div className="h-7 w-full bg-slate-950/80 border-b border-white/5 flex items-center justify-between px-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest font-futuristic shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-accent shadow-glow-accent animate-pulse" />
-          <span>LEVELUP.OS_DESKTOP_CLIENT v1.0.4</span>
-        </div>
-        
-        {/* Mock Windows Header controls */}
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-0.5 bg-slate-600 hover:bg-slate-400 cursor-pointer transition-colors" />
-          <div className="w-2.5 h-2.5 border border-slate-600 hover:border-slate-400 cursor-pointer transition-colors" />
-          <div className="w-2.5 h-2.5 text-slate-600 hover:text-rose-500 cursor-pointer flex items-center justify-center font-display text-[8px] transition-colors leading-none">✕</div>
-        </div>
-      </div>
-
-      {/* Main App Workspace Shell */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Sidebar Navigation */}
-        <Sidebar />
-
-        {/* Main Content Workspace viewport */}
-        <main className="flex-1 overflow-y-auto px-6 md:px-10 py-8 relative">
-          {renderActivePage()}
-        </main>
-        
-        {/* Floating Toasts container */}
-        <div className="fixed top-10 right-6 z-50 flex flex-col gap-2.5 pointer-events-none">
-          {toasts.map(toast => (
-            <ToastItem key={toast.id} toast={toast} />
-          ))}
-        </div>
+      {/* Floating Toasts container */}
+      <div className="fixed top-10 right-6 z-50 flex flex-col gap-2.5 pointer-events-none">
+        {toasts.map(toast => (
+          <ToastItem key={toast.id} toast={toast} />
+        ))}
       </div>
 
       {/* Full-screen cinematic Rank Promotion Overlay popup */}
