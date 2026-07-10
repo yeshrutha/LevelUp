@@ -220,5 +220,35 @@ export const EmailService = {
         </div>
       `
     });
+  },
+
+  sendHabitReminderEmail: async (toEmail, displayName, habitName) => {
+    const resend = getResendInstance();
+    const from = getFromEmail();
+    return await resend.emails.send({
+      from,
+      to: toEmail,
+      subject: `⏰ Habit Reminder: Time to master "${habitName}"`,
+      html: `
+        <div style="font-family: Arial, sans-serif; background-color: #0c0f17; color: #f1f5f9; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #00e5ff; font-size: 24px; letter-spacing: 2px; margin: 0;">LEVELUP REMINDER</h1>
+            <p style="color: #64748b; font-size: 10px; text-transform: uppercase; margin-top: 5px;">Habit Master Alert</p>
+          </div>
+          <div style="background-color: #020617; padding: 20px; border-radius: 8px; border: 1px solid #334155;">
+            <p style="font-size: 14px; color: #cbd5e1; margin-top: 0;">Hi <strong>${displayName}</strong>,</p>
+            <p style="font-size: 16px; color: #ffffff; line-height: 1.6;">
+              It is time for your scheduled habit: <span style="color: #00e5ff; font-weight: bold; font-size: 18px;">"${habitName}"</span>!
+            </p>
+            <p style="font-size: 14px; color: #94a3b8;">
+              Keep your streak going and don't forget to check it off inside your terminal to gain XP and rank up!
+            </p>
+          </div>
+          <div style="text-align: center; margin-top: 20px; font-size: 10px; color: #475569;">
+            LEVELUP TERMINAL SYSTEM • ALL RIGHTS RESERVED
+          </div>
+        </div>
+      `
+    });
   }
 };

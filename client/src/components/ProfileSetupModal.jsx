@@ -27,6 +27,7 @@ export const ProfileSetupModal = () => {
       ...prev,
       displayName: displayName.trim(),
       avatar: selectedAvatar,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata',
       isProfileSetupComplete: true
     }));
 

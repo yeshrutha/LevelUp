@@ -1309,6 +1309,74 @@ app.post('/api/system/reset-db', async (req, res) => {
   }
 });
 
+// Scheduled Habit Reminders Background Job
+const sentRemindersCache = {};
+
+const sendHabitReminders = async () => {
+  try {
+    let users = [];
+    if (isConnectedToMongo) {
+      users = await UserData.find({});
+    } else {
+      users = Object.values(localDB);
+    }
+
+    const now = new Date();
+    const dateKey = now.toISOString().split('T')[0];
+
+    for (const u of users) {
+      const profile = u.profile || {};
+      const reminders = profile.habitReminders || {};
+      const timezone = profile.timezone || 'Asia/Kolkata';
+
+      let userLocalTimeStr = "";
+      try {
+        userLocalTimeStr = now.toLocaleTimeString('en-US', {
+          timeZone: timezone,
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+      } catch (err) {
+        userLocalTimeStr = now.toLocaleTimeString('en-US', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+      }
+
+      const parts = userLocalTimeStr.split(':');
+      if (parts.length < 2) continue;
+      const formattedTime = `${parts[0]}:${parts[1]}`;
+
+      for (const [habitName, reminder] of Object.entries(reminders)) {
+        if (reminder && reminder.enabled && reminder.time === formattedTime) {
+          const cacheKey = `${u.email}_${habitName}_${dateKey}_${formattedTime}`;
+          if (sentRemindersCache[cacheKey]) continue;
+
+          sentRemindersCache[cacheKey] = true;
+          const recipient = u.email;
+          const displayName = profile.displayName || 'LevelUp User';
+
+          console.log(`⏰ Dispatching scheduled email reminder to ${recipient} for: "${habitName}" at ${reminder.time}`);
+          
+          try {
+            await EmailService.sendHabitReminderEmail(recipient, displayName, habitName);
+          } catch (mailErr) {
+            console.error(`❌ Resend: Failed to send reminder to ${recipient}:`, mailErr.message);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error sending scheduled habit reminders:', err.message);
+  }
+};
+
+// Check every 30 seconds
+setInterval(sendHabitReminders, 30000);
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

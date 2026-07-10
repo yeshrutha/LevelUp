@@ -4,9 +4,11 @@ import { CheckCircle2, Flame, Award, Trash2, Plus, Info, AlertTriangle } from 'l
 import { motion } from 'framer-motion';
 
 export const Habits = () => {
-  const { habits, toggleHabit, habitList, addHabit, deleteHabit } = useApp();
+  const { habits, toggleHabit, habitList, addHabit, deleteHabit, user } = useApp();
   const today = new Date().toISOString().split('T')[0];
   const [inputHabit, setInputHabit] = useState('');
+  const [enableReminder, setEnableReminder] = useState(false);
+  const [reminderTime, setReminderTime] = useState('08:00');
   
   // Get today's logs
   const todayLogs = habits[today] || {};
@@ -20,8 +22,10 @@ export const Habits = () => {
   const handleAddSubmit = (e) => {
     e.preventDefault();
     if (!inputHabit.trim()) return;
-    addHabit(inputHabit.trim());
+    addHabit(inputHabit.trim(), enableReminder ? reminderTime : null);
     setInputHabit('');
+    setEnableReminder(false);
+    setReminderTime('08:00');
   };
 
   // Render 7-day history calendar
@@ -93,22 +97,49 @@ export const Habits = () => {
           Customize Your Trackers
         </h3>
         
-        <form onSubmit={handleAddSubmit} className="flex gap-2">
-          <input 
-            type="text"
-            required
-            value={inputHabit}
-            onChange={(e) => setInputHabit(e.target.value)}
-            placeholder="Add new routine (e.g. Read books, Gym session, Drink 3L Water)..."
-            className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-gradient-to-r from-primary to-accent hover:from-primary-light hover:to-accent-light text-slate-950 font-futuristic font-bold text-xs uppercase rounded shadow cursor-pointer flex items-center gap-1.5"
-          >
-            <Plus size={14} />
-            Add Habit
-          </button>
+        <form onSubmit={handleAddSubmit} className="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-white/5">
+          <div className="flex gap-2">
+            <input 
+              type="text"
+              required
+              value={inputHabit}
+              onChange={(e) => setInputHabit(e.target.value)}
+              placeholder="Add new routine (e.g. Read books, Gym session, Drink 3L Water)..."
+              className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-3.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 bg-gradient-to-r from-primary to-accent hover:from-primary-light hover:to-accent-light text-slate-950 font-futuristic font-bold text-xs uppercase rounded shadow cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus size={14} />
+              Add Habit
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-4 text-[10px]">
+            <label className="flex items-center gap-1.5 cursor-pointer text-slate-400 hover:text-slate-200">
+              <input 
+                type="checkbox"
+                checked={enableReminder}
+                onChange={(e) => setEnableReminder(e.target.checked)}
+                className="accent-primary"
+              />
+              <span>Enable Email Reminder Alert</span>
+            </label>
+            
+            {enableReminder && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] text-slate-500 uppercase font-futuristic">Schedule Time:</span>
+                <input 
+                  type="time"
+                  required
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  className="bg-slate-950 border border-white/10 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+                />
+              </div>
+            )}
+          </div>
         </form>
       </div>
 
@@ -203,6 +234,12 @@ export const Habits = () => {
 
                 <div>
                   <h3 className="text-xs font-bold text-slate-200 mt-2 truncate pr-6">{habitName}</h3>
+                  {user?.habitReminders?.[habitName]?.enabled && (
+                    <div className="text-[8px] text-cyan-400 mt-1 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                      <span>Scheduled Email at {user.habitReminders[habitName].time}</span>
+                    </div>
+                  )}
                   
                   <div className="flex justify-between items-center mt-4">
                     <span className="text-[9px] font-bold font-futuristic text-accent bg-cyan-500/10 border border-cyan-400/20 px-2 py-0.5 rounded">

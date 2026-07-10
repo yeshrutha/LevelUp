@@ -513,8 +513,12 @@ export const AppProvider = ({ children }) => {
 
   const handleLoginSuccess = (data, rememberMe) => {
     const storage = rememberMe ? localStorage : sessionStorage;
+    const profile = {
+      ...data.profile,
+      timezone: data.profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'
+    };
     storage.setItem('levelup_token', data.token);
-    storage.setItem('levelup_user', JSON.stringify(data.profile));
+    storage.setItem('levelup_user', JSON.stringify(profile));
     if (rememberMe) {
       localStorage.setItem('levelup_remember_me', 'true');
     } else {
@@ -522,7 +526,7 @@ export const AppProvider = ({ children }) => {
     }
 
     setToken(data.token);
-    setUser(data.profile);
+    setUser(profile);
 
     if (Array.isArray(data.habitList)) setHabitList(data.habitList);
     if (data.habits) setHabits(data.habits);
@@ -1109,15 +1113,31 @@ export const AppProvider = ({ children }) => {
   };
 
   // Habit List Customizer Helper
-  const addHabit = (name) => {
+  const addHabit = (name, reminder = null) => {
     if (!name || habitList.includes(name)) return;
     setHabitList(prev => [...prev, name]);
+    
+    if (reminder) {
+      setUser(prev => ({
+        ...prev,
+        habitReminders: {
+          ...(prev.habitReminders || {}),
+          [name]: { enabled: true, time: reminder }
+        }
+      }));
+    }
+
     addXP(10, `Tracked custom habit: "${name}"`);
     triggerToast('Habit Tracked', `New habit added: "${name}"`, 'success');
   };
 
   const deleteHabit = (name) => {
     setHabitList(prev => prev.filter(h => h !== name));
+    setUser(prev => {
+      const copy = { ...(prev.habitReminders || {}) };
+      delete copy[name];
+      return { ...prev, habitReminders: copy };
+    });
   };
 
   // Dashboard Target Goal Customizer Helper
