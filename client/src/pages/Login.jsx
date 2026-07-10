@@ -231,7 +231,7 @@ export const Login = () => {
 
         {/* Sign In & Sign Up Form views */}
         {view !== 'forgot' && (
-          <form onSubmit={handleAuthSubmit} className="space-y-4">
+          <form onSubmit={handleAuthSubmit} className="space-y-4" autoComplete="off">
             
             {view === 'signup' && (
               <div className="space-y-1">
@@ -246,6 +246,7 @@ export const Login = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Alex Mercer"
+                    autoComplete="off"
                     className="w-full bg-slate-900 border border-white/5 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 transition-colors"
                   />
                 </div>
@@ -264,6 +265,7 @@ export const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. alex@levelup.com"
+                  autoComplete="off"
                   className="w-full bg-slate-900 border border-white/5 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 transition-colors"
                 />
               </div>
@@ -292,6 +294,7 @@ export const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={view === 'signup' ? "Requires A-Z, a-z, 0-9, special, min 8 chars" : "Password credential"}
+                  autoComplete="new-password"
                   className="w-full bg-slate-900 border border-white/5 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 transition-colors"
                 />
               </div>
