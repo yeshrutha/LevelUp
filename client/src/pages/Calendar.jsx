@@ -150,7 +150,7 @@ export const Calendar = () => {
                     className={`h-20 border rounded-lg p-1.5 flex flex-col justify-between transition-all duration-200 relative ${
                       dayNum 
                         ? isDayToday
-                          ? 'border-accent bg-primary/20 hover:bg-primary/30 shadow-[0_0_12px_rgba(0,229,255,0.25)]'
+                          ? 'border-cyan-400 bg-cyan-950/40 hover:bg-cyan-950/60 shadow-[0_0_10px_rgba(34,211,238,0.2)]'
                           : hasEvents 
                             ? 'border-cyan-500/20 bg-slate-900/50 hover:bg-slate-900' 
                             : 'border-white/5 bg-slate-950/20 hover:bg-slate-900/30'
@@ -160,11 +160,11 @@ export const Calendar = () => {
                     {dayNum && (
                       <>
                         <div className="flex justify-between items-center w-full">
-                          <span className={`text-[10px] font-bold ${isDayToday ? 'text-accent font-futuristic' : hasEvents ? 'text-cyan-400' : 'text-slate-500'}`}>
+                          <span className={`text-[10px] font-bold ${isDayToday ? 'text-cyan-400 font-futuristic' : hasEvents ? 'text-cyan-400' : 'text-slate-500'}`}>
                             {dayNum}
                           </span>
                           {isDayToday && (
-                            <span className="text-[6px] bg-accent/20 border border-accent/40 text-accent font-bold px-1 py-0.2 rounded font-futuristic uppercase tracking-widest leading-none scale-90">
+                            <span className="text-[6px] bg-cyan-400/25 border border-cyan-400/40 text-cyan-300 font-bold px-1 py-0.2 rounded font-futuristic uppercase tracking-widest leading-none scale-90">
                               Today
                             </span>
                           )}
