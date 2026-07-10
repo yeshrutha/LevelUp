@@ -183,6 +183,9 @@ if (mongoURI) {
 const UserDataSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   passwordHash: { type: String, select: false },
+  phoneNumber: { type: String, default: '' },
+  emailVerified: { type: Boolean, default: false },
+  phoneVerified: { type: Boolean, default: false },
   profile: { type: Object, default: {} },
   habitList: { type: Array, default: [] },
   customPages: { type: Array, default: [] },
@@ -252,17 +255,13 @@ app.get('/api/profile', async (req, res) => {
     if (isConnectedToMongo) {
       let data = await UserData.findOne({ email: req.user.email });
       if (!data) {
+        const profile = createUserProfile(req.user.email);
         data = await UserData.create({
           email: req.user.email,
-          profile: {
-            displayName: req.user.email.split('@')[0],
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200',
-            xp: 0,
-            level: 1,
-            rank: 'Iron I',
-            streak: 0,
-            readiness: 0
-          }
+          phoneNumber: '',
+          emailVerified: false,
+          phoneVerified: false,
+          profile
         });
       }
       return res.json(data.profile);
@@ -278,14 +277,28 @@ app.get('/api/profile', async (req, res) => {
 app.post('/api/profile/sync', async (req, res) => {
   try {
     if (isConnectedToMongo) {
+      const profile = req.body;
       await UserData.updateOne(
         { email: req.user.email },
-        { $set: { profile: req.body, updatedAt: new Date() } },
+        { 
+          $set: { 
+            profile, 
+            phoneNumber: profile.phoneNumber || '',
+            emailVerified: !!profile.emailVerified,
+            phoneVerified: !!profile.phoneVerified,
+            updatedAt: new Date() 
+          } 
+        },
         { upsert: true }
       );
       return res.json({ success: true });
     } else {
-      getOrInitUser(req.user.email).profile = req.body;
+      const profile = req.body;
+      const user = getOrInitUser(req.user.email);
+      user.profile = profile;
+      user.phoneNumber = profile.phoneNumber || '';
+      user.emailVerified = !!profile.emailVerified;
+      user.phoneVerified = !!profile.phoneVerified;
       return res.json({ success: true });
     }
   } catch (err) {
@@ -479,6 +492,9 @@ app.post('/api/auth/register', async (req, res) => {
       const created = await UserData.create({
         email: normalizedEmail,
         passwordHash,
+        phoneNumber: '',
+        emailVerified: false,
+        phoneVerified: false,
         profile,
         habitList: [],
         customPages: [],
@@ -584,6 +600,9 @@ app.post('/api/auth/google', authRateLimiter, async (req, res) => {
 
         existing = await UserData.create({
           email: normalizedEmail,
+          phoneNumber: '',
+          emailVerified: true,
+          phoneVerified: false,
           profile,
           habitList: [],
           customPages: [],
@@ -594,6 +613,7 @@ app.post('/api/auth/google', authRateLimiter, async (req, res) => {
         // Ensure emailVerified is true
         if (!existing.profile) existing.profile = {};
         existing.profile.emailVerified = true;
+        existing.emailVerified = true;
         existing.markModified('profile');
         await existing.save();
       }
@@ -804,6 +824,7 @@ app.post('/api/auth/verify-email-code', authRateLimiter, async (req, res) => {
     user.verificationExpires = undefined;
     if (!user.profile) user.profile = {};
     user.profile.emailVerified = true;
+    user.emailVerified = true;
 
     if (isConnectedToMongo) {
       user.markModified('profile');
