@@ -786,47 +786,46 @@ export const AppProvider = ({ children }) => {
 
   // Main XP synchronization engine
   const addXP = (amount, actionName) => {
-    setUser(prev => {
-      const nextXP = prev.xp + amount;
-      
-      // Calculate rank and level based on 333 XP per rank tier (1000 XP per level)
-      const rankIndex = Math.min(Math.floor(nextXP / 333), RANKS.length - 1);
-      const newRank = RANKS[rankIndex];
-      const newLevel = Math.floor(nextXP / 1000) + 1; // Level goes up every 3 ranks (1000 XP)
+    if (!user) return;
+    
+    const prevXP = user.xp;
+    const nextXP = prevXP + amount;
+    
+    // Calculate rank and level based on 333 XP per rank tier (1000 XP per level)
+    const rankIndex = Math.min(Math.floor(nextXP / 333), RANKS.length - 1);
+    const newRank = RANKS[rankIndex];
+    const newLevel = Math.floor(nextXP / 1000) + 1; // Level goes up every 3 ranks (1000 XP)
 
-      const profileChanged = newRank !== prev.rank;
-      
-      if (profileChanged) {
-        setPromotionEvent({
-          oldRank: prev.rank,
-          newRank: newRank,
-          xpGained: amount,
-          action: actionName
-        });
-        triggerToast('Rank Ascent!', `Promoted to ${newRank}!`, 'rank');
-      }
-
-      // Add a small notification
-      const newNotif = {
-        id: Math.random().toString(),
-        title: amount > 0 ? 'XP Progress Gained' : 'XP Adjusted',
-        body: `Unlocked via: ${actionName}`,
-        type: 'xp',
-        read: false,
-        time: 'Just now'
-      };
-      setNotifications(old => [newNotif, ...old]);
-      triggerToast(amount > 0 ? 'XP Progress Gained' : 'XP Adjusted', `Unlocked via: ${actionName}`, 'xp');
-
-      const updated = {
-        ...prev,
-        xp: nextXP,
-        rank: newRank,
-        level: newLevel
-      };
-      
-      return updated;
+    const profileChanged = newRank !== user.rank;
+    
+    setUser({
+      ...user,
+      xp: nextXP,
+      rank: newRank,
+      level: newLevel
     });
+
+    if (profileChanged) {
+      setPromotionEvent({
+        oldRank: user.rank,
+        newRank: newRank,
+        xpGained: amount,
+        action: actionName
+      });
+      triggerToast('Rank Ascent!', `Promoted to ${newRank}!`, 'rank');
+    }
+
+    // Add a small notification
+    const newNotif = {
+      id: Math.random().toString(),
+      title: amount > 0 ? 'XP Progress Gained' : 'XP Adjusted',
+      body: `Unlocked via: ${actionName}`,
+      type: 'xp',
+      read: false,
+      time: 'Just now'
+    };
+    setNotifications(old => [newNotif, ...old]);
+    triggerToast(amount > 0 ? 'XP Progress Gained' : 'XP Adjusted', `Unlocked via: ${actionName}`, 'xp');
   };
 
   // Complete a daily mission
