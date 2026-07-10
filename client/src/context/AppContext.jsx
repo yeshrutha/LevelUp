@@ -95,12 +95,21 @@ export const AppProvider = ({ children }) => {
     
     // Self-healing: recover user.email from token if missing to unblock database synchronization
     const storedToken = localStorage.getItem('levelup_token') || sessionStorage.getItem('levelup_token');
+    let needsSave = false;
     if (storedToken && parsed && !parsed.email) {
       const decoded = decodeToken(storedToken);
       if (decoded && decoded.email) {
         parsed.email = decoded.email;
-        localStorage.setItem('levelup_user', JSON.stringify(parsed));
+        needsSave = true;
       }
+    }
+    // Self-healing: guarantee timezone is always populated
+    if (parsed && !parsed.timezone) {
+      parsed.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
+      needsSave = true;
+    }
+    if (needsSave && parsed) {
+      localStorage.setItem('levelup_user', JSON.stringify(parsed));
     }
     return parsed;
   });

@@ -1382,9 +1382,12 @@ const sendHabitReminders = async () => {
           const reminderMinutes = remHour * 60 + remMin;
           const userMinutes = userHour * 60 + userMin;
           const diffMinutes = userMinutes - reminderMinutes;
+          // Send if past the scheduled time, and either we haven't sent any alert today yet OR it's a multiple of 5 minutes later
+          const todayPrefix = `${u.email}_${habitName}_${userDateStr}_`;
+          const hasSentToday = Object.keys(sentRemindersCache).some(k => k.startsWith(todayPrefix));
+          const shouldSend = diffMinutes >= 0 && (!hasSentToday || diffMinutes % 5 === 0);
 
-          // Send if past the scheduled time and a multiple of 5 minutes later
-          if (diffMinutes >= 0 && diffMinutes % 5 === 0) {
+          if (shouldSend) {
             const cacheKey = `${u.email}_${habitName}_${userDateStr}_${formattedTime}`;
             if (sentRemindersCache[cacheKey]) continue;
 
@@ -1392,7 +1395,7 @@ const sendHabitReminders = async () => {
             const recipient = u.email;
             const displayName = profile.displayName || 'LevelUp User';
 
-            console.log(`⏰ Snooze Reminder: dispatching to ${recipient} for incomplete: "${habitName}" at ${formattedTime} (Diff: ${diffMinutes}m)`);
+            console.log(`⏰ Snooze Reminder: dispatching to ${recipient} for incomplete: "${habitName}" at ${formattedTime} (Diff: ${diffMinutes}m, First Today: ${!hasSentToday})`);
             
             try {
               await EmailService.sendHabitReminderEmail(recipient, displayName, habitName);
