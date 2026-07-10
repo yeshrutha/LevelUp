@@ -99,13 +99,6 @@ export const Habits = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 px-3.5 py-1.5 rounded-lg">
-            <Flame size={16} className="text-orange-400 animate-bounce" />
-            <span className="text-xs font-bold font-futuristic text-orange-400 uppercase tracking-widest">
-              {streakCount} Day Streak
-            </span>
-          </div>
-
           <button
             onClick={() => setShowAddModal(true)}
             className="px-4 py-2.5 bg-gradient-to-r from-primary to-accent hover:shadow-glow-accent text-slate-950 font-futuristic font-bold text-xs uppercase rounded-lg shadow-lg cursor-pointer flex items-center gap-2 transition-all shrink-0"
