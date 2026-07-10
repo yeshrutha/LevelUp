@@ -860,6 +860,62 @@ app.post('/api/support/ticket', async (req, res) => {
   }
 });
 
+// POST Dispatch Webhook Notifications to Slack & Discord
+app.post('/api/integrations/notify', async (req, res) => {
+  const { event, title, body } = req.body;
+  const userEmail = req.headers.authorization?.replace('Bearer ', '');
+  if (!userEmail) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const user = await UserData.findOne({ email: userEmail.toLowerCase() });
+    if (!user) return res.status(404).json({ error: 'User telemetry record not found.' });
+
+    const integrations = user.profile?.settings?.integrations || {};
+    const discordUrl = user.profile?.settings?.discordUrl;
+    const slackUrl = user.profile?.settings?.slackUrl;
+
+    // Discord Webhook Dispatch
+    if (discordUrl && integrations.discord === true) {
+      try {
+        await fetch(discordUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            embeds: [{
+              title: `🏆 LevelUp: ${title}`,
+              description: body,
+              color: event === 'rank_up' ? 11027199 : 3447003,
+              timestamp: new Date().toISOString()
+            }]
+          })
+        });
+      } catch (err) {
+        console.error('❌ Discord Webhook: Error sending payload:', err.message);
+      }
+    }
+
+    // Slack Webhook Dispatch
+    if (slackUrl && integrations.slack === true) {
+      try {
+        await fetch(slackUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: `🏆 *LevelUp:* ${title}\n> ${body}`
+          })
+        });
+      } catch (err) {
+        console.error('❌ Slack Webhook: Error sending payload:', err.message);
+      }
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('❌ Integrations Notify Router: Error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // --- AI Assistant Integration (NVIDIA AI with Gemini Fallback) ---
 const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
   const nvidiaKey = process.env.NVIDIA_API_KEY;

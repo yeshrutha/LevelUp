@@ -285,6 +285,23 @@ export const AppProvider = ({ children }) => {
     }, 4000);
   };
 
+  // Dispatch live webhook notifications to connected Discord/Slack services
+  const sendIntegrationNotification = async (title, body, event = 'info') => {
+    if (!user || !user.email) return;
+    try {
+      await fetch('http://localhost:5000/api/integrations/notify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.email.toLowerCase()}`
+        },
+        body: JSON.stringify({ event, title, body })
+      });
+    } catch (e) {
+      console.warn('Failed to send integration sync notification:', e.message);
+    }
+  };
+
   // Generic backend fetch helper client
   const apiFetch = async (path, options = {}) => {
     if (!user || !user.email) return null;
@@ -799,6 +816,7 @@ export const AppProvider = ({ children }) => {
 
           setTimeout(() => {
             triggerToast('🏆 Trophy Unlocked!', `Achievement: "${ach.title}" unlocked!`, 'rank');
+            sendIntegrationNotification('🏆 Trophy Unlocked!', `Achievement: "${ach.title}" unlocked!`, 'achievement');
           }, 500);
         });
       }
@@ -885,6 +903,7 @@ export const AppProvider = ({ children }) => {
       };
       setNotifications(old => [rankNotif, ...old]);
       triggerToast('Rank Ascent!', `Promoted to ${newRank}!`, 'rank');
+      sendIntegrationNotification('Rank Ascent!', `Promoted to ${newRank}!`, 'rank_up');
     }
   };
 
