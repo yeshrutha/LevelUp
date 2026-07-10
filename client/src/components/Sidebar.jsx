@@ -99,7 +99,9 @@ export const Sidebar = () => {
           
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <h4 className="font-display font-semibold text-sm text-slate-100 truncate">{user.displayName}</h4>
+              <h4 className="font-display font-semibold text-sm text-slate-100 truncate">
+                {user.settings?.username || user.username || user.displayName?.toLowerCase().replace(/\s+/g, '_') || 'agent'}
+              </h4>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[10px] uppercase font-futuristic text-cyan-400 font-medium">Lvl {user.level}</span>
                 <span className="text-slate-600 text-[10px]">•</span>
