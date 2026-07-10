@@ -75,10 +75,34 @@ export const playPromotionSound = () => {
   }
 };
 
+const decodeToken = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+};
+
 export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('levelup_user') || sessionStorage.getItem('levelup_user');
-    return saved ? JSON.parse(saved) : null;
+    let parsed = saved ? JSON.parse(saved) : null;
+    
+    // Self-healing: recover user.email from token if missing to unblock database synchronization
+    const storedToken = localStorage.getItem('levelup_token') || sessionStorage.getItem('levelup_token');
+    if (storedToken && parsed && !parsed.email) {
+      const decoded = decodeToken(storedToken);
+      if (decoded && decoded.email) {
+        parsed.email = decoded.email;
+        localStorage.setItem('levelup_user', JSON.stringify(parsed));
+      }
+    }
+    return parsed;
   });
 
   const [token, setToken] = useState(() => {
