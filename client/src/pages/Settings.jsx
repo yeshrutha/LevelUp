@@ -4,7 +4,7 @@ import { Settings as SettingsIcon, Sun, Moon, User, Mail, Phone, ShieldCheck, Al
 import { motion } from 'framer-motion';
 
 export const Settings = () => {
-  const { user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, setCurrentTab, triggerToast } = useApp();
+  const { user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, setCurrentTab, triggerToast, setNotifications } = useApp();
 
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
@@ -28,6 +28,18 @@ export const Settings = () => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setEmailVerifiedCode(code);
     setEmailVerifying(true);
+
+    // Push verification code to system notification center
+    const newNotif = {
+      id: `notif_${Math.random()}`,
+      title: 'Email Security Alert',
+      body: `Verification Code: ${code}. Enter this code on settings to verify your email.`,
+      type: 'system',
+      read: false,
+      time: 'Just now'
+    };
+    setNotifications(old => [newNotif, ...old]);
+
     triggerToast('Verification Code Sent', `OTP code sent to email: ${code}`, 'success');
   };
 
@@ -58,6 +70,18 @@ export const Settings = () => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setPhoneVerifiedCode(code);
     setPhoneVerifying(true);
+
+    // Push OTP to system notification center
+    const newNotif = {
+      id: `notif_${Math.random()}`,
+      title: 'Phone Security Alert',
+      body: `Phone OTP Code: ${code}. Confirm this code on settings to verify your device.`,
+      type: 'system',
+      read: false,
+      time: 'Just now'
+    };
+    setNotifications(old => [newNotif, ...old]);
+
     triggerToast('OTP Code Sent', `OTP code sent to phone: ${code}`, 'success');
   };
 
