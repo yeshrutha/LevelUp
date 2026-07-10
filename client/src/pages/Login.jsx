@@ -431,13 +431,7 @@ export const Login = () => {
           </div>
         )}
 
-        {/* Divider & Social Sign In */}
-        <div className="relative my-6 text-center">
-          <hr className="border-white/5" />
-          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 bg-slate-950/90 text-[8px] uppercase tracking-widest font-futuristic text-slate-500">
-            Or Sync With
-          </span>
-        </div>
+
 
 
 
