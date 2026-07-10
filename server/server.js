@@ -617,18 +617,28 @@ app.post('/api/auth/password-login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
-  const targetEmail = email.toLowerCase().trim();
+  const identifier = email.trim();
+  const isEmailInput = identifier.includes('@');
+  const targetEmail = identifier.toLowerCase();
 
   try {
     let user = null;
     if (isConnectedToMongo) {
-      user = await UserData.findOne({ email: targetEmail }).select('+passwordHash');
+      if (isEmailInput) {
+        user = await UserData.findOne({ email: targetEmail }).select('+passwordHash');
+      } else {
+        user = await UserData.findOne({ displayName: { $regex: new RegExp(`^${identifier}$`, 'i') } }).select('+passwordHash');
+      }
     } else {
-      user = localDB[targetEmail];
+      if (isEmailInput) {
+        user = localDB[targetEmail];
+      } else {
+        user = Object.values(localDB).find(u => u.displayName?.toLowerCase() === targetEmail);
+      }
     }
 
     if (!user || !user.passwordHash) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      return res.status(401).json({ error: 'Invalid email/username or password.' });
     }
 
     const validPassword = await bcrypt.compare(password, user.passwordHash);
