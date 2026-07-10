@@ -786,6 +786,17 @@ export const AppProvider = ({ children }) => {
           return { ...prev, unlockedAchievements: updated };
         });
         newlyUnlocked.forEach(ach => {
+          // Add to notifications log
+          const newNotif = {
+            id: `ach_${Math.random()}`,
+            title: '🏆 Achievement Unlocked!',
+            body: `Trophy unlocked: "${ach.title}"`,
+            type: 'rank',
+            read: false,
+            time: 'Just now'
+          };
+          setNotifications(old => [newNotif, ...old]);
+
           setTimeout(() => {
             triggerToast('🏆 Trophy Unlocked!', `Achievement: "${ach.title}" unlocked!`, 'rank');
           }, 500);
@@ -863,20 +874,18 @@ export const AppProvider = ({ children }) => {
         xpGained: amount,
         action: actionName
       });
+      // Add to notifications log
+      const rankNotif = {
+        id: `rank_${Math.random()}`,
+        title: 'Rank Ascent!',
+        body: `Promoted to ${newRank}!`,
+        type: 'rank',
+        read: false,
+        time: 'Just now'
+      };
+      setNotifications(old => [rankNotif, ...old]);
       triggerToast('Rank Ascent!', `Promoted to ${newRank}!`, 'rank');
     }
-
-    // Add a small notification
-    const newNotif = {
-      id: Math.random().toString(),
-      title: amount > 0 ? 'XP Progress Gained' : 'XP Adjusted',
-      body: `Unlocked via: ${actionName}`,
-      type: 'xp',
-      read: false,
-      time: 'Just now'
-    };
-    setNotifications(old => [newNotif, ...old]);
-    triggerToast(amount > 0 ? 'XP Progress Gained' : 'XP Adjusted', `Unlocked via: ${actionName}`, 'xp');
   };
 
   // Complete a daily mission

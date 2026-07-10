@@ -130,7 +130,6 @@ export const Settings = () => {
   // Sync theme config
   const handleThemeToggle = (mode) => {
     setThemeMode(mode);
-    triggerToast('Theme Updated', `System switched to ${mode} mode interface.`, 'success');
   };
 
   // Generic Save settings helper
@@ -145,7 +144,6 @@ export const Settings = () => {
       };
       return nextUser;
     });
-    triggerToast('Configuration Saved', 'Settings updated and synced successfully.', 'success');
   };
 
   const handleProfileUpdateSubmit = (e) => {
@@ -174,7 +172,6 @@ export const Settings = () => {
     });
 
     setSaveSuccess(true);
-    triggerToast('Profile Updated', 'Identity settings saved successfully.', 'success');
     setTimeout(() => setSaveSuccess(false), 2000);
   };
 
