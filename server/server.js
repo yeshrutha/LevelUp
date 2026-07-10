@@ -808,6 +808,37 @@ app.post('/api/auth/verify-email-code', authRateLimiter, async (req, res) => {
   }
 });
 
+// POST Verify Password (for dangerous operations confirmation)
+app.post('/api/auth/verify-password', authRateLimiter, async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+  const normalizedEmail = email.toLowerCase().trim();
+
+  try {
+    let user = null;
+    if (isConnectedToMongo) {
+      user = await UserData.findOne({ email: normalizedEmail }).select('+passwordHash');
+    } else {
+      user = localDB[normalizedEmail];
+    }
+
+    if (!user || !user.passwordHash) {
+      return res.status(401).json({ error: 'Authentication failed.' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Incorrect password.' });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // --- AI Assistant Integration (NVIDIA AI with Gemini Fallback) ---
 const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
   const nvidiaKey = process.env.NVIDIA_API_KEY;

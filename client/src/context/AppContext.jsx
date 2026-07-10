@@ -553,6 +553,22 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const verifyPassword = async (password) => {
+    if (!user || !user.email) return { success: false, error: 'No active user session.' };
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/verify-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) return { success: false, error: data.error || 'Password verification failed.' };
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: 'Network error: ' + err.message };
+    }
+  };
+
   // Custom User Sign-Out Action
   const logoutUser = () => {
     localStorage.removeItem('levelup_user');
@@ -1028,7 +1044,7 @@ export const AppProvider = ({ children }) => {
       calendar, addCalendarEvent, deleteCalendarEvent,
       dailyMissions, completeMission,
       notifications, setNotifications, markAllNotificationsRead, purgeAllNotifications,
-      addXP, loginUser, logoutUser, resetSystem,
+      addXP, loginUser, logoutUser, resetSystem, verifyPassword,
       forgotPassword, resetPassword, sendVerificationCode, verifyEmailCode, loginWithGoogle, token, setToken,
       customPages, createCustomPage, updateCustomPage, deleteCustomPage, togglePageTask,
       themeMode, setThemeMode: changeThemeMode,
