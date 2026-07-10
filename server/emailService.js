@@ -13,7 +13,7 @@ const getFromEmail = () => {
 };
 
 const getWebsiteUrl = () => {
-  return process.env.WEBSITE_URL || 'http://localhost:5173';
+  return process.env.WEBSITE_URL || 'https://levelup-assistant.vercel.app';
 };
 
 export const EmailService = {
