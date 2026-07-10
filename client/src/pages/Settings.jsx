@@ -257,14 +257,23 @@ export const Settings = () => {
     if (connectingService) return;
     setConnectingService(service);
     setTimeout(() => {
-      setIntegrations(prev => {
-        const next = { ...prev, [service]: !prev[service] };
-        handleSaveSettings({ integrations: next });
-        return next;
+      setUser(prev => {
+        const currentStatus = prev?.settings?.integrations?.[service] || 'disconnected';
+        const nextStatus = currentStatus === 'connected' ? 'disconnected' : 'connected';
+        const updated = {
+          ...(prev.settings?.integrations || {}),
+          [service]: nextStatus
+        };
+        return {
+          ...prev,
+          settings: {
+            ...(prev.settings || {}),
+            integrations: updated
+          }
+        };
       });
       setConnectingService(null);
-      triggerToast('Integration Sync', `${service.toUpperCase()} connection parameters updated.`, 'success');
-    }, 1500);
+    }, 1000);
   };
 
   // Secure Purge / Reset trigger
