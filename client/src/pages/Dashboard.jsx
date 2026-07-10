@@ -6,7 +6,6 @@ import {
   Target, 
   Zap, 
   ChevronRight, 
-  Quote, 
   Calendar, 
   ListTodo, 
   CheckSquare,
@@ -41,38 +40,6 @@ export const Dashboard = () => {
     else if (hours >= 12) setGreeting('Good Afternoon');
     else setGreeting('Good Morning');
   }, []);
-
-  const quotes = [
-    { text: "Discipline is choosing between what you want now and what you want most.", author: "Abraham Lincoln" },
-    { text: "We suffer more often in imagination than in reality.", author: "Seneca" },
-    { text: "The happiness of your life depends upon the quality of your thoughts.", author: "Marcus Aurelius" },
-    { text: "It is not that I'm so smart. But I stay with the questions much longer.", author: "Albert Einstein" },
-    { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
-    { text: "Do not pray for an easy life, pray for the strength to endure a difficult one.", author: "Bruce Lee" },
-    { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
-    { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
-    { text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.", author: "Aristotle" },
-    { text: "Our greatest glory is not in never falling, but in rising every time we fall.", author: "Confucius" },
-    { text: "Be yourself; everyone else is already taken.", author: "Oscar Wilde" },
-    { text: "The journey of a thousand miles begins with one step.", author: "Lao Tzu" },
-    { text: "Whether you think you can, or you think you can't – you're right.", author: "Henry Ford" },
-    { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
-    { text: "Optimism is the faith that leads to achievement. Nothing can be done without hope and confidence.", author: "Helen Keller" },
-    { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-    { text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
-    { text: "What lies behind us and what lies before us are tiny matters compared to what lies within us.", author: "Ralph Waldo Emerson" },
-    { text: "An unexamined life is not worth living.", author: "Socrates" },
-    { text: "Live as if you were to die tomorrow. Learn as if you were to live forever.", author: "Mahatma Gandhi" },
-    { text: "The way to get started is to quit talking and begin doing.", author: "Walt Disney" },
-    { text: "Perfection is not attainable, but if we chase perfection we can catch excellence.", author: "Vince Lombardi" },
-    { text: "You are never too old to set another goal or to dream a new dream.", author: "C.S. Lewis" },
-    { text: "You just can't beat the person who never gives up.", author: "Babe Ruth" },
-    { text: "Intelligence is the ability to adapt to change.", author: "Stephen Hawking" },
-    { text: "Nothing in life is to be feared, it is only to be understood. Now is the time to fear less, so that we may fear more.", author: "Marie Curie" },
-    { text: "It's not what happens to you, but how you react to it that matters.", author: "Epictetus" }
-  ];
-
-  const [dailyQuote] = useState(() => quotes[Math.floor(Math.random() * quotes.length)]);
 
   // Calculate countdown days remaining
   const calculateDaysRemaining = (targetDateStr) => {
@@ -430,19 +397,7 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          {/* Daily Quote card */}
-          <div className="glass-panel p-5 rounded-xl border-white/10 relative overflow-hidden flex flex-col justify-between h-40">
-            <Quote size={18} className="text-accent/20 absolute top-4 right-4" />
-            <p className="text-xs leading-relaxed text-slate-300 italic z-10 select-text">
-              "{dailyQuote.text}"
-            </p>
-            <div className="flex items-center gap-2 z-10 border-t border-white/5 pt-2 mt-2">
-              <div className="w-1.5 h-1.5 bg-accent rounded-full" />
-              <span className="text-[10px] font-semibold font-display text-slate-400 uppercase tracking-widest">
-                {dailyQuote.author}
-              </span>
-            </div>
-          </div>
+
 
 
         </div>
