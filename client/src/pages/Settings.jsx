@@ -27,7 +27,6 @@ export const Settings = () => {
   // --- LOCAL STATES ---
   // Account Form
   const [displayName, setDisplayName] = useState(user?.displayName || '');
-  const [username, setUsername] = useState(user?.username || user?.displayName?.toLowerCase().replace(/\s+/g, '_') || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [bio, setBio] = useState(user?.settings?.bio || '');
   const [country, setCountry] = useState(user?.settings?.country || 'India');
@@ -137,7 +136,6 @@ export const Settings = () => {
         emailVerified: isEmailStillVerified,
         settings: {
           ...(prev.settings || {}),
-          username: username.trim(),
           bio: bio.trim(),
           country,
           timezone
@@ -221,7 +219,7 @@ export const Settings = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(user, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href",     dataStr);
-    downloadAnchor.setAttribute("download", `${username}_levelup_telemetry.json`);
+    downloadAnchor.setAttribute("download", `${displayName.toLowerCase().replace(/\s+/g, '_')}_levelup_telemetry.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -485,26 +483,14 @@ export const Settings = () => {
                   </div>
 
                   <form onSubmit={handleProfileUpdateSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Full Name</label>
-                        <input
-                          type="text"
-                          value={displayName}
-                          onChange={(e) => setDisplayName(e.target.value)}
-                          className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Username</label>
-                        <input
-                          type="text"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40 font-mono"
-                        />
-                      </div>
+                    <div className="space-y-1">
+                      <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Profile Name</label>
+                      <input
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
+                      />
                     </div>
 
                     <div className="space-y-1">
