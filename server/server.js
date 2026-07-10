@@ -1301,6 +1301,31 @@ app.post('/api/ai/planner', async (req, res) => {
   });
 });
 
+// System Diagnostics Endpoint
+app.get('/api/system/diagnostics', async (req, res) => {
+  try {
+    const now = new Date();
+    const users = isConnectedToMongo ? await UserData.find({}) : Object.values(localDB);
+    
+    const diagnostics = users.map(u => ({
+      email: u.email,
+      hasProfile: !!u.profile,
+      timezone: u.profile?.timezone || 'Asia/Kolkata',
+      habitReminders: u.profile?.habitReminders || {},
+      habitList: u.habitList || []
+    }));
+
+    return res.json({
+      serverTime: now.toISOString(),
+      isConnectedToMongo,
+      sentRemindersCache,
+      diagnostics
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Database System Purge Reset Endpoint
 app.post('/api/system/reset-db', async (req, res) => {
   try {
