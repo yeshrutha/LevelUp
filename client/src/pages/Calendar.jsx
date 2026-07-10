@@ -109,22 +109,34 @@ export const Calendar = () => {
                 const dayEvents = getEventsForDay(dayNum);
                 const hasEvents = dayEvents.length > 0;
                 
+                const today = new Date();
+                const isDayToday = dayNum === today.getDate() && today.getMonth() === 6 && today.getFullYear() === 2026;
+                
                 return (
                   <div 
                     key={idx}
-                    className={`h-20 border rounded-lg p-1.5 flex flex-col justify-between transition-all duration-200 ${
+                    className={`h-20 border rounded-lg p-1.5 flex flex-col justify-between transition-all duration-200 relative ${
                       dayNum 
-                        ? hasEvents 
-                          ? 'border-cyan-500/20 bg-slate-900/50 hover:bg-slate-900' 
-                          : 'border-white/5 bg-slate-950/20 hover:bg-slate-900/30'
+                        ? isDayToday
+                          ? 'border-accent bg-primary/20 hover:bg-primary/30 shadow-[0_0_12px_rgba(0,229,255,0.25)]'
+                          : hasEvents 
+                            ? 'border-cyan-500/20 bg-slate-900/50 hover:bg-slate-900' 
+                            : 'border-white/5 bg-slate-950/20 hover:bg-slate-900/30'
                         : 'border-transparent bg-transparent pointer-events-none'
                     }`}
                   >
                     {dayNum && (
                       <>
-                        <span className={`text-[10px] font-bold ${hasEvents ? 'text-accent' : 'text-slate-500'}`}>
-                          {dayNum}
-                        </span>
+                        <div className="flex justify-between items-center w-full">
+                          <span className={`text-[10px] font-bold ${isDayToday ? 'text-accent font-futuristic' : hasEvents ? 'text-cyan-400' : 'text-slate-500'}`}>
+                            {dayNum}
+                          </span>
+                          {isDayToday && (
+                            <span className="text-[6px] bg-accent/20 border border-accent/40 text-accent font-bold px-1 py-0.2 rounded font-futuristic uppercase tracking-widest leading-none scale-90">
+                              Today
+                            </span>
+                          )}
+                        </div>
                         
                         {/* Event tags in cell */}
                         <div className="space-y-1 overflow-hidden max-h-12">
