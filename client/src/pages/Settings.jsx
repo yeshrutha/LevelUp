@@ -300,7 +300,6 @@ export const Settings = () => {
     { id: 'ai', label: 'AI Settings', icon: Cpu },
     { id: 'email', label: 'Email Prefs', icon: Mail },
     { id: 'preferences', label: 'Preferences', icon: Calendar },
-    { id: 'data', label: 'Data Registry', icon: Database },
     { id: 'integrations', label: 'Integrations', icon: Link },
     { id: 'help', label: 'Help & Info', icon: HelpCircle },
     { id: 'danger', label: 'Danger Zone', icon: AlertOctagon }
@@ -1211,61 +1210,7 @@ export const Settings = () => {
                 </div>
               )}
 
-              {/* Data Registry Category */}
-              {activeTab === 'data' && (
-                <div className="space-y-6">
-                  <div className="border-b border-white/5 pb-3">
-                    <h3 className="text-xs font-futuristic font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
-                      <Database size={14} className="text-accent" /> Telemetry Data Registry
-                    </h3>
-                  </div>
 
-                  <p className="text-[10px] text-slate-400 leading-relaxed font-display">
-                    Export your local task configurations, timeline pages, achievements, and statistics to keep a offline backup copy, or reload it at any time.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <button
-                      onClick={downloadUserData}
-                      className="p-4 bg-slate-950/40 border border-white/5 hover:border-accent rounded-xl text-left transition-colors cursor-pointer group flex flex-col justify-between h-24"
-                    >
-                      <Database size={16} className="text-slate-500 group-hover:text-accent" />
-                      <div>
-                        <span className="text-[10px] font-bold text-white uppercase block font-futuristic">Export JSON Telemetry</span>
-                        <span className="text-[8px] text-slate-500 mt-1 uppercase tracking-wider block font-mono">Download local user settings & lists</span>
-                      </div>
-                    </button>
-
-                    <label className="p-4 bg-slate-950/40 border border-white/5 hover:border-accent rounded-xl text-left transition-colors cursor-pointer group flex flex-col justify-between h-24 relative">
-                      <input
-                        type="file"
-                        accept=".json"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            try {
-                              const parsed = JSON.parse(event.target.result);
-                              setUser(parsed);
-                              triggerToast('Import Successful', 'Telemetry profile restored.', 'success');
-                            } catch (err) {
-                              triggerToast('Import Error', 'Invalid backup format.', 'error');
-                            }
-                          };
-                          reader.readAsText(file);
-                        }}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      <RefreshCw size={16} className="text-slate-500 group-hover:text-accent animate-spin-slow" />
-                      <div>
-                        <span className="text-[10px] font-bold text-white uppercase block font-futuristic">Import JSON Telemetry</span>
-                        <span className="text-[8px] text-slate-500 mt-1 uppercase tracking-wider block font-mono">Upload and merge local backup configs</span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              )}
 
               {/* Integrations Category */}
               {activeTab === 'integrations' && (
