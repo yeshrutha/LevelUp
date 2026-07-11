@@ -11,6 +11,125 @@ import {
   Target 
 } from 'lucide-react';
 
+const MarkdownRenderer = ({ text, isUser }) => {
+  if (!text) return null;
+  if (isUser) {
+    return <p className="text-slate-200 select-text leading-relaxed text-xs">{text}</p>;
+  }
+  
+  const lines = text.split('\n');
+  let inTable = false;
+  let tableHeaders = [];
+  let tableRows = [];
+  const renderedElements = [];
+  let listItems = [];
+  let inList = false;
+
+  const flushList = (key) => {
+    if (listItems.length > 0) {
+      renderedElements.push(
+        <ul key={key} className="list-disc pl-5 space-y-1.5 my-2 text-slate-350 select-text">
+          {listItems.map((item, i) => <li key={i}>{item}</li>)}
+        </ul>
+      );
+      listItems = [];
+      inList = false;
+    }
+  };
+
+  const flushTable = (key) => {
+    if (tableRows.length > 0 || tableHeaders.length > 0) {
+      renderedElements.push(
+        <div key={key} className="overflow-x-auto my-3.5 border border-white/5 rounded-lg w-full select-text">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-950/60 border-b border-white/10">
+                {tableHeaders.map((h, i) => (
+                  <th key={i} className="p-2 font-bold text-slate-300 uppercase tracking-wider text-[10px]">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tableRows.map((row, i) => (
+                <tr key={i} className="border-b border-white/5 hover:bg-white/[0.01]">
+                  {row.map((cell, j) => (
+                    <td key={j} className="p-2 text-slate-400 font-mono text-[10.5px]">{cell}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      tableHeaders = [];
+      tableRows = [];
+      inTable = false;
+    }
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    
+    // 1. Table parsing
+    if (trimmed.startsWith('|')) {
+      flushList(`list_${index}`);
+      inTable = true;
+      const cells = line.split('|').map(c => c.trim()).filter((_, i, arr) => i > 0 && i < arr.length - 1);
+      
+      // Skip separator lines like |---|---|
+      if (cells.every(c => c.startsWith('-'))) {
+        return;
+      }
+      
+      if (tableHeaders.length === 0) {
+        tableHeaders = cells;
+      } else {
+        tableRows.push(cells);
+      }
+      return;
+    } else {
+      if (inTable) {
+        flushTable(`table_${index}`);
+      }
+    }
+
+    // 2. Heading parsing
+    if (trimmed.startsWith('#')) {
+      flushList(`list_${index}`);
+      const level = trimmed.match(/^#+/)[0].length;
+      const content = trimmed.replace(/^#+\s*/, '');
+      const headingClass = level === 1 
+        ? 'text-xs font-futuristic font-bold text-cyan-400 mt-4 mb-2 uppercase border-b border-white/5 pb-1 flex items-center gap-1' 
+        : 'text-[11px] font-bold text-white mt-3 mb-1.5';
+      renderedElements.push(React.createElement(`h${Math.min(level + 1, 6)}`, { key: index, className: headingClass }, content));
+      return;
+    }
+
+    // 3. Unordered list parsing
+    if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
+      inList = true;
+      const content = trimmed.replace(/^[-*]\s*/, '');
+      listItems.push(content);
+      return;
+    } else {
+      if (inList) {
+        flushList(`list_${index}`);
+      }
+    }
+
+    // 4. Normal paragraph
+    if (trimmed !== '') {
+      renderedElements.push(<p key={index} className="text-slate-350 my-1.5 leading-relaxed text-[11px] select-text">{trimmed}</p>);
+    }
+  });
+
+  // Flush remaining structures
+  flushList('final_list');
+  flushTable('final_table');
+
+  return <div className="space-y-1 w-full">{renderedElements}</div>;
+};
+
 export default function AIPlanner() {
   const { user } = useApp();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://levelup-1-7j6v.onrender.com';
@@ -211,13 +330,13 @@ export default function AIPlanner() {
                 {isUser ? 'Master' : 'Coach'} • {m.time}
               </span>
               <div 
-                className={`p-3.5 rounded-xl border leading-relaxed text-xs ${
+                className={`p-3.5 rounded-xl border leading-relaxed text-xs w-full ${
                   isUser 
                     ? 'bg-slate-900 border-white/10 text-white rounded-tr-none' 
-                    : 'bg-slate-900/30 border-cyan-500/10 text-slate-200 rounded-tl-none shadow-glow-cyan/5 whitespace-pre-wrap'
+                    : 'bg-slate-900/30 border-cyan-500/10 text-slate-200 rounded-tl-none shadow-glow-cyan/5'
                 }`}
               >
-                {m.text}
+                <MarkdownRenderer text={m.text} isUser={isUser} />
               </div>
             </div>
           );
