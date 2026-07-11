@@ -483,30 +483,90 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Verification-First Authentication Helpers
-  const initiateVerify = async (email) => {
+  // Web Push & Direct Authentication Helpers
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const registerPushNotifications = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.warn('Browser does not support service workers or push notifications.');
+      return { success: false, error: 'Push notifications not supported on this browser.' };
+    }
+
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/initiate-verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+
+      if (permission !== 'granted') {
+        return { success: false, error: 'Browser notification permission denied.' };
+      }
+
+      const reg = await navigator.serviceWorker.ready;
+      
+      // Fetch VAPID Key from server
+      const vapidRes = await fetch(`${API_BASE_URL}/api/system/vapid-key`);
+      const { publicKey } = await vapidRes.json();
+
+      const subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
       });
-      return await res.json();
+
+      // Send to server
+      const tokenVal = localStorage.getItem('levelup_token') || sessionStorage.getItem('levelup_token') || token;
+      const subRes = await fetch(`${API_BASE_URL}/api/notifications/subscribe`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenVal}`
+        },
+        body: JSON.stringify({ subscription })
+      });
+
+      if (!subRes.ok) {
+        throw new Error('Failed to register subscription on backend.');
+      }
+
+      console.log('🤖 WebPush: Successfully registered push subscription.');
+      return { success: true };
     } catch (err) {
-      return { success: false, error: 'Terminal offline.' };
+      console.error('Error subscribing to push alerts:', err);
+      return { success: false, error: err.message };
     }
   };
 
-  const confirmVerify = async (email, code) => {
+  const triggerTestPushNotification = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/confirm-verify`, {
+      const tokenVal = localStorage.getItem('levelup_token') || sessionStorage.getItem('levelup_token') || token;
+      const res = await fetch(`${API_BASE_URL}/api/notifications/test-push`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenVal}`
+        }
       });
-      return await res.json();
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Push failed.' };
+      }
+      triggerToast('Push Dispatched', 'Test browser alert has been broadcasted!', 'success');
+      return { success: true };
     } catch (err) {
-      return { success: false, error: 'Terminal offline.' };
+      return { success: false, error: err.message };
     }
   };
 
@@ -518,7 +578,7 @@ export const AppProvider = ({ children }) => {
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
-      if (!res.ok) return { success: false, error: data.error || 'Password setup failed.' };
+      if (!res.ok) return { success: false, error: data.error || 'Registration failed.' };
 
       handleLoginSuccess(data, rememberMe);
       return { success: true };
@@ -572,6 +632,11 @@ export const AppProvider = ({ children }) => {
     
     triggerToast('Authenticated', 'System initialized successfully!', 'success');
     setCurrentTab('dashboard');
+
+    // Register push subscription in background
+    setTimeout(() => {
+      registerPushNotifications().catch(() => {});
+    }, 1000);
   };
 
   const loginWithGoogle = async (email, displayName, avatar, rememberMe) => {
@@ -584,115 +649,10 @@ export const AppProvider = ({ children }) => {
       const data = await res.json();
       if (!res.ok) return { success: false, error: data.error || 'Google Sign-In failed.' };
 
-      const storage = rememberMe ? localStorage : sessionStorage;
-      storage.setItem('levelup_token', data.token);
-      storage.setItem('levelup_user', JSON.stringify(data.profile));
-      if (rememberMe) {
-        localStorage.setItem('levelup_remember_me', 'true');
-      } else {
-        localStorage.removeItem('levelup_remember_me');
-      }
-
-      setToken(data.token);
-      setUser(data.profile);
-
-      if (Array.isArray(data.habitList)) setHabitList(data.habitList);
-      if (data.habits) setHabits(data.habits);
-      if (Array.isArray(data.calendar)) setCalendar(data.calendar);
-      if (Array.isArray(data.customPages)) setCustomPages(data.customPages);
-      if (data.goal) setDashboardGoal(data.goal);
-
-      triggerToast('Welcome back', `Logged in via Google as ${data.profile.displayName}!`, 'success');
-      setCurrentTab('dashboard');
+      handleLoginSuccess(data, rememberMe);
       return { success: true };
     } catch (err) {
       return { success: false, error: 'Network error connecting to auth server: ' + err.message };
-    }
-  };
-
-  const forgotPassword = async (email) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const data = await res.json();
-      if (!res.ok) return { success: false, error: data.error || 'Failed to send reset code.' };
-      triggerToast('Reset Code Sent', 'Password reset code has been sent to your email.', 'success');
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: 'Network error: ' + err.message };
-    }
-  };
-
-  const resetPassword = async (email, code, newPassword) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code, newPassword })
-      });
-      const data = await res.json();
-      if (!res.ok) return { success: false, error: data.error || 'Failed to reset password.' };
-      triggerToast('Password Updated', 'Your password has been updated. Please sign in.', 'success');
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: 'Network error: ' + err.message };
-    }
-  };
-
-  const sendVerificationCode = async () => {
-    if (!user || !user.email) return { success: false, error: 'No active user found.' };
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/send-verification`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email })
-      });
-      const data = await res.json();
-      if (!res.ok) return { success: false, error: data.error || 'Failed to send code.' };
-      
-      // Push OTP to notification dropdown for local testing
-      if (data.code) {
-        const newNotif = {
-          id: `notif_${Math.random()}`,
-          title: 'Email Security Alert',
-          body: `Verification Code: ${data.code}. Enter this code on settings to verify your email.`,
-          type: 'system',
-          read: false,
-          time: 'Just now'
-        };
-        setNotifications(old => [newNotif, ...old]);
-      }
-      
-      triggerToast('Verification Code Sent', 'Simulated OTP code sent to your email.', 'success');
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: 'Network error: ' + err.message };
-    }
-  };
-
-  const verifyEmailCode = async (code) => {
-    if (!user || !user.email) return { success: false, error: 'No active user found.' };
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/verify-email-code`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email, code })
-      });
-      const data = await res.json();
-      if (!res.ok) return { success: false, error: data.error || 'Invalid code.' };
-      
-      setUser(data.profile);
-      const isRemembered = localStorage.getItem('levelup_remember_me') === 'true';
-      const storage = isRemembered ? localStorage : sessionStorage;
-      storage.setItem('levelup_user', JSON.stringify(data.profile));
-      
-      triggerToast('Email Verified', 'Your email address has been verified!', 'success');
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: 'Network error: ' + err.message };
     }
   };
 
@@ -1247,8 +1207,9 @@ export const AppProvider = ({ children }) => {
       dailyMissions, completeMission,
       notifications, setNotifications, markAllNotificationsRead, purgeAllNotifications,
       addXP, loginUser, logoutUser, resetSystem, verifyPassword,
-      forgotPassword, resetPassword, sendVerificationCode, verifyEmailCode, loginWithGoogle, token, setToken,
-      initiateVerify, confirmVerify, setPasswordAndRegister, loginWithPassword,
+      loginWithGoogle, token, setToken,
+      setPasswordAndRegister, loginWithPassword,
+      registerPushNotifications, triggerTestPushNotification,
       customPages, createCustomPage, updateCustomPage, deleteCustomPage, togglePageTask,
       themeMode, setThemeMode: changeThemeMode,
       toasts, triggerToast,

@@ -14,7 +14,7 @@ export const Settings = () => {
     user, setUser, themeMode, setThemeMode, logoutUser, resetSystem, 
     setCurrentTab, triggerToast, notifications, setNotifications, 
     markAllNotificationsRead, purgeAllNotifications, isMuted, setIsMuted, 
-    playAlertSound, sendVerificationCode, verifyEmailCode, verifyPassword 
+    playAlertSound, verifyPassword, registerPushNotifications, triggerTestPushNotification 
   } = useApp();
 
   // Active Category selection
@@ -39,9 +39,10 @@ export const Settings = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [securityLoading, setSecurityLoading] = useState(false);
 
-  // Email Verification
-  const [emailVerifying, setEmailVerifying] = useState(false);
-  const [emailEnteredCode, setEmailEnteredCode] = useState('');
+  // Push Permission Status
+  const [pushPermission, setPushPermission] = useState(
+    'Notification' in window ? Notification.permission : 'default'
+  );
 
   // Toggles & Settings Objects (Synchronized directly to user.settings)
   const settings = user?.settings || {};
@@ -208,23 +209,27 @@ export const Settings = () => {
     setTimeout(() => setSaveSuccess(false), 2000);
   };
 
-  // Verification Code
-  const sendEmailCode = async () => {
-    if (!editEmail.trim()) return;
-    setEmailVerifying(true);
-    const res = await sendVerificationCode();
-    if (!res.success) {
-      triggerToast('Verification Failed', res.error, 'error');
-      setEmailVerifying(false);
+  // Push Notification Handlers
+  const handleRequestPushPermission = async () => {
+    if (!('Notification' in window)) {
+      triggerToast('Not Supported', 'Browser notifications are not supported on this client.', 'warning');
+      return;
+    }
+    
+    const res = await registerPushNotifications();
+    setPushPermission(Notification.permission);
+    if (res.success) {
+      triggerToast('Notifications Configured', 'Push alerts successfully enabled!', 'success');
+      handleSaveSettings({ pushEnabled: true });
+    } else {
+      triggerToast('Permission Rejected', res.error || 'Failed to request notification credentials.', 'rose');
     }
   };
 
-  const confirmEmailCode = async () => {
-    if (!emailEnteredCode.trim()) return;
-    const res = await verifyEmailCode(emailEnteredCode.trim());
-    if (res.success) {
-      setEmailVerifying(false);
-      setEmailEnteredCode('');
+  const handleSendTestPush = async () => {
+    const res = await triggerTestPushNotification();
+    if (!res.success) {
+      triggerToast('Test Dispatched Failed', res.error || 'Check browser permissions.', 'warning');
     }
   };
 
@@ -344,7 +349,7 @@ export const Settings = () => {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'ai', label: 'AI Settings', icon: Cpu },
-    { id: 'email', label: 'Email Prefs', icon: Mail },
+    { id: 'notifications_config', label: 'Push Settings', icon: Bell },
     { id: 'preferences', label: 'Preferences', icon: Calendar },
     { id: 'help', label: 'Help & Info', icon: HelpCircle },
     { id: 'danger', label: 'Danger Zone', icon: AlertOctagon }
@@ -589,21 +594,7 @@ export const Settings = () => {
                     </h3>
                   </div>
 
-                  <div className="bg-slate-950/40 p-4 rounded-xl border border-white/5 flex justify-between items-center">
-                    <div>
-                      <h4 className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Verification Status</h4>
-                      <p className="text-[9px] text-slate-500 mt-0.5">Verified emails permit alerts & credential recoverability.</p>
-                    </div>
-                    {user?.emailVerified ? (
-                      <span className="text-[9px] font-bold font-futuristic text-emerald-400 bg-emerald-500/10 border border-emerald-400/20 px-3 py-1 rounded-lg uppercase tracking-wider flex items-center gap-1.5">
-                        <ShieldCheck size={12} /> Email Verified
-                      </span>
-                    ) : (
-                      <span className="text-[9px] font-bold font-futuristic text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg uppercase tracking-wider animate-pulse">
-                        Identity Unverified
-                      </span>
-                    )}
-                  </div>
+
 
                   {/* Change Password Form */}
                   <form onSubmit={handleUpdatePassword} className="space-y-4">
@@ -996,44 +987,92 @@ export const Settings = () => {
                 </div>
               )}
 
-              {/* Email Preferences Category */}
-              {activeTab === 'email' && (
+              {/* Push Notifications Category */}
+              {activeTab === 'notifications_config' && (
                 <div className="space-y-6">
                   <div className="border-b border-white/5 pb-3">
                     <h3 className="text-xs font-futuristic font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
-                      <Mail size={14} className="text-accent" /> Email & Dispatch Registries
+                      <Bell size={14} className="text-accent" /> Browser Push Notifications
                     </h3>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Registered Email</label>
-                      <div className="relative">
-                        <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input
-                          type="email"
-                          value={editEmail}
-                          onChange={(e) => setEditEmail(e.target.value)}
-                          className="w-full bg-slate-950 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
-                        />
+                    <div className="p-4 rounded-xl bg-slate-950 border border-white/10 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5 text-left">
+                          <div className="text-xs font-bold text-white uppercase tracking-wider">Browser Permission Status</div>
+                          <p className="text-[10px] text-slate-400">Current status reported by your web browser console.</p>
+                        </div>
+                        <div className={`px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-wider ${
+                          pushPermission === 'granted' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                          pushPermission === 'denied' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                          'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        }`}>
+                          {pushPermission}
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-white/5 flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={handleRequestPushPermission}
+                          className="px-4 py-2 bg-gradient-to-r from-primary to-accent hover:shadow-glow-accent text-slate-950 font-futuristic font-bold text-[9px] uppercase tracking-wider rounded-lg transition-all cursor-pointer"
+                        >
+                          Request/Refresh Permission
+                        </button>
+
+                        {pushPermission === 'granted' && (
+                          <button
+                            type="button"
+                            onClick={handleSendTestPush}
+                            className="px-4 py-2 bg-slate-900 border border-white/10 hover:border-white/20 text-white font-futuristic font-bold text-[9px] uppercase tracking-wider rounded-lg transition-all cursor-pointer"
+                          >
+                            Send Test Notification
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/5 pt-4">
-                      <div className="space-y-2">
-                        <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">Email Frequency</label>
-                        <select
-                          value={emailFrequency}
-                          onChange={(e) => {
-                            setEmailFrequency(e.target.value);
-                            handleSaveSettings({ emailFrequency: e.target.value });
-                          }}
-                          className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none"
-                        >
-                          <option>Instant</option>
-                          <option>Daily Digest</option>
-                          <option>Weekly Digest</option>
-                        </select>
+                    <div className="p-4 rounded-xl bg-slate-950 border border-white/10 space-y-3">
+                      <div className="text-xs font-bold text-white uppercase tracking-wider text-left">Push Notification Settings</div>
+                      
+                      <div className="flex items-center justify-between py-2 border-b border-white/5">
+                        <div className="space-y-0.5 text-left">
+                          <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Habit Reminders</label>
+                          <p className="text-[9px] text-slate-500">Send push reminders for incomplete habits at their scheduled hour.</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={settings.pushHabitReminders !== false}
+                          onChange={(e) => handleSaveSettings({ pushHabitReminders: e.target.checked })}
+                          className="accent-cyan-400 h-4 w-4 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between py-2 border-b border-white/5">
+                        <div className="space-y-0.5 text-left">
+                          <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Achievements & Milestones</label>
+                          <p className="text-[9px] text-slate-500">Notify me immediately when I unlock new badges or level up.</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={settings.pushAchievements !== false}
+                          onChange={(e) => handleSaveSettings({ pushAchievements: e.target.checked })}
+                          className="accent-cyan-400 h-4 w-4 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between py-2">
+                        <div className="space-y-0.5 text-left">
+                          <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Target Goal Deadlines</label>
+                          <p className="text-[9px] text-slate-500">Notify me as deadlines for my target milestones approach.</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={settings.pushGoalDeadlines !== false}
+                          onChange={(e) => handleSaveSettings({ pushGoalDeadlines: e.target.checked })}
+                          className="accent-cyan-400 h-4 w-4 cursor-pointer"
+                        />
                       </div>
                     </div>
                   </div>

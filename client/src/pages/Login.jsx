@@ -69,8 +69,8 @@ export const Login = () => {
     }
   };
 
-  // Register Step 1: Send Email Code
-  const handleRegEmailSubmit = async (e) => {
+  // Register Submit Handler
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -79,50 +79,6 @@ export const Login = () => {
       setErrorMsg('Please enter a valid email address.');
       return;
     }
-
-    setLoading(true);
-    const res = await initiateVerify(regEmail.trim());
-    setLoading(false);
-
-    if (res.success) {
-      if (res.code) {
-        setDevOtp(res.code);
-      }
-      setSuccessMsg('Verification code dispatched to your inbox.');
-      setRegStep('verify');
-    } else {
-      setErrorMsg(res.error || 'Could not initiate registration.');
-    }
-  };
-
-  // Register Step 2: Verify Code
-  const handleRegCodeSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
-
-    if (!regCode.trim() || regCode.length < 6) {
-      setErrorMsg('Enter the 6-digit verification code.');
-      return;
-    }
-
-    setLoading(true);
-    const res = await confirmVerify(regEmail.trim(), regCode.trim());
-    setLoading(false);
-
-    if (res.success) {
-      setSuccessMsg('Email verified successfully.');
-      setRegStep('set_password');
-    } else {
-      setErrorMsg(res.error || 'Invalid verification code.');
-    }
-  };
-
-  // Register Step 3: Set Password and Complete Setup
-  const handleRegPasswordSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
 
     const pwdError = validatePassword(regPassword);
     if (pwdError) {
@@ -139,15 +95,6 @@ export const Login = () => {
     }
   };
 
-  const handleBackToEmail = () => {
-    setRegStep('email');
-    setRegCode('');
-    setRegPassword('');
-    setErrorMsg('');
-    setSuccessMsg('');
-    setDevOtp('');
-  };
-
   const handleTabChange = (type) => {
     setAuthType(type);
     setErrorMsg('');
@@ -155,10 +102,7 @@ export const Login = () => {
     setLoginIdentifier('');
     setLoginPassword('');
     setRegEmail('');
-    setRegCode('');
     setRegPassword('');
-    setRegStep('email');
-    setDevOtp('');
   };
 
   return (
@@ -331,164 +275,82 @@ export const Login = () => {
 
           {/* VIEW: REGISTER */}
           {authType === 'register' && (
-            <div key="register" className="space-y-4">
-              
-              {/* Step 1: Input email and initiate registration verification */}
-              {regStep === 'email' && (
-                <motion.form
-                  key="reg_email"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  onSubmit={handleRegEmailSubmit}
-                  className="space-y-4"
-                  autoComplete="off"
-                >
-                  <div className="space-y-1 text-left">
-                    <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input
-                        type="email"
-                        required
-                        value={regEmail}
-                        onChange={(e) => setRegEmail(e.target.value)}
-                        placeholder="e.g. name@domain.com"
-                        autoComplete="off"
-                        className="w-full bg-slate-900 border border-white/5 rounded-lg pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/40 transition-colors"
-                      />
-                    </div>
-                  </div>
+            <motion.form
+              key="register"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              onSubmit={handleRegisterSubmit}
+              className="space-y-4"
+              autoComplete="off"
+            >
+              {/* Email Input */}
+              <div className="space-y-1 text-left">
+                <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="e.g. name@domain.com"
+                    autoComplete="off"
+                    className="w-full bg-slate-900 border border-white/5 rounded-lg pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/40 transition-colors"
+                  />
+                </div>
+              </div>
 
+              {/* Password Input */}
+              <div className="space-y-1 text-left">
+                <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
+                  Set Account Password
+                </label>
+                <div className="relative">
+                  <Lock size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type={showRegPassword ? "text" : "password"}
+                    required
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder="Min 8 characters, uppercase, number"
+                    autoComplete="new-password"
+                    className="w-full bg-slate-900 border border-white/5 rounded-lg pl-9 pr-10 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/40 transition-colors"
+                  />
                   <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3 bg-gradient-to-r from-primary to-accent hover:shadow-glow-accent text-slate-950 font-futuristic font-bold text-[9px] uppercase tracking-widest rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                    type="button"
+                    onClick={() => setShowRegPassword(!showRegPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white cursor-pointer"
                   >
-                    {loading ? 'Dispatched Sync Request...' : 'Initiate Registration'}
+                    {showRegPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
-                </motion.form>
-              )}
+                </div>
+              </div>
 
-              {/* Step 2: Verification code entry */}
-              {regStep === 'verify' && (
-                <motion.form
-                  key="reg_verify"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  onSubmit={handleRegCodeSubmit}
-                  className="space-y-4"
-                  autoComplete="off"
-                >
-                  <div className="space-y-1 text-left">
-                    <div className="flex justify-between items-center">
-                      <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
-                        Verification OTP Code
-                      </label>
-                      <button
-                        type="button"
-                        onClick={handleBackToEmail}
-                        className="text-[9px] text-slate-400 hover:text-white flex items-center gap-1 font-futuristic tracking-wider cursor-pointer"
-                      >
-                        <ArrowLeft size={10} /> Change Email
-                      </button>
-                    </div>
-                    
-                    <div className="relative">
-                      <Terminal size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input
-                        type="text"
-                        required
-                        maxLength={6}
-                        value={regCode}
-                        onChange={(e) => setRegCode(e.target.value)}
-                        placeholder="Enter 6-digit code"
-                        autoComplete="off"
-                        className="w-full bg-slate-900 border border-white/5 rounded-lg pl-9 pr-3 py-2.5 text-xs text-white tracking-[0.25em] font-mono text-center focus:outline-none focus:border-cyan-500/40 transition-colors"
-                      />
-                    </div>
-                    
-                    {devOtp && import.meta.env.DEV && (
-                      <div className="pt-1.5 text-[8px] font-mono text-cyan-400 uppercase tracking-wider text-left bg-slate-950/40 p-1.5 rounded border border-cyan-500/10">
-                        [⚡ Developer OTP Bypass: {devOtp}]
-                      </div>
-                    )}
-                  </div>
+              {/* Remember Session */}
+              <div className="flex items-center gap-2 pt-1 text-left">
+                <input
+                  type="checkbox"
+                  id="rememberReg"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="accent-cyan-400 bg-slate-950 border border-white/10 rounded h-3.5 w-3.5 cursor-pointer"
+                />
+                <label htmlFor="rememberReg" className="text-[10px] text-slate-400 cursor-pointer font-display select-none">
+                  Remember my session credentials
+                </label>
+              </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3 bg-gradient-to-r from-primary to-accent hover:shadow-glow-accent text-slate-950 font-futuristic font-bold text-[9px] uppercase tracking-widest rounded-lg transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {loading ? 'Verifying...' : 'Verify Secure Protocol'}
-                  </button>
-                </motion.form>
-              )}
-
-              {/* Step 3: Complete registration by assigning password */}
-              {regStep === 'set_password' && (
-                <motion.form
-                  key="reg_password"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  onSubmit={handleRegPasswordSubmit}
-                  className="space-y-4"
-                  autoComplete="off"
-                >
-                  <div className="space-y-1 text-left">
-                    <label className="block text-[9px] uppercase font-futuristic text-slate-400 font-bold tracking-wider">
-                      Set Account Password
-                    </label>
-                    <div className="relative">
-                      <Lock size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input
-                        type={showRegPassword ? "text" : "password"}
-                        required
-                        value={regPassword}
-                        onChange={(e) => setRegPassword(e.target.value)}
-                        placeholder="Min 8 characters, uppercase, number"
-                        autoComplete="new-password"
-                        className="w-full bg-slate-900 border border-white/5 rounded-lg pl-9 pr-10 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500/40 transition-colors"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowRegPassword(!showRegPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white cursor-pointer"
-                      >
-                        {showRegPassword ? <EyeOff size={13} /> : <Eye size={13} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Remember Session */}
-                  <div className="flex items-center gap-2 pt-1 text-left">
-                    <input
-                      type="checkbox"
-                      id="rememberReg"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="accent-cyan-400 bg-slate-950 border border-white/10 rounded h-3.5 w-3.5 cursor-pointer"
-                    />
-                    <label htmlFor="rememberReg" className="text-[10px] text-slate-400 cursor-pointer font-display select-none">
-                      Remember my session credentials
-                    </label>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3 bg-gradient-to-r from-primary to-accent hover:shadow-glow-accent text-slate-950 font-futuristic font-bold text-[9px] uppercase tracking-widest rounded-lg transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {loading ? 'Configuring Account...' : 'Complete Initialization'}
-                  </button>
-                </motion.form>
-              )}
-
-            </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-primary to-accent hover:shadow-glow-accent text-slate-950 font-futuristic font-bold text-[9px] uppercase tracking-widest rounded-lg transition-all cursor-pointer disabled:opacity-50"
+              >
+                {loading ? 'Configuring Account...' : 'Complete Initialization'}
+              </button>
+            </motion.form>
           )}
 
         </AnimatePresence>

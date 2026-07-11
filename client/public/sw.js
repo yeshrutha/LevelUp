@@ -55,3 +55,47 @@ self.addEventListener('fetch', (e) => {
     );
   }
 });
+
+self.addEventListener('push', (event) => {
+  let data = { title: 'LevelUp Alert', body: 'New alert received.' };
+  try {
+    if (event.data) {
+      data = event.data.json();
+    }
+  } catch (err) {
+    if (event.data) {
+      data = { title: 'LevelUp Alert', body: event.data.text() };
+    }
+  }
+  
+  const options = {
+    body: data.body,
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
+    data: {
+      url: data.url || '/'
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const targetUrl = event.notification.data.url ? new URL(event.notification.data.url, self.location.origin).href : self.location.origin;
+      
+      for (const client of clientList) {
+        if (client.url === targetUrl && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

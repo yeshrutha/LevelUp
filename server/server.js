@@ -9,86 +9,7 @@ import fs from 'fs';
 
 dotenv.config();
 
-import { EmailService, emailLogs, smtpStartupStatus, smtpStartupError } from './emailService.js';
-
-import nodemailer from 'nodemailer';
-
-let transporter = null;
-
-const getTransporter = async () => {
-  if (transporter) return transporter;
-
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT || 587;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (host && user && pass) {
-    transporter = nodemailer.createTransport({
-      host,
-      port: parseInt(port),
-      secure: port == 465,
-      auth: { user, pass }
-    });
-  } else {
-    try {
-      const testAccount = await nodemailer.createTestAccount();
-      transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass
-        }
-      });
-      console.log('✉️ Mailer: Ethereal test SMTP account configured successfully.');
-    } catch (err) {
-      console.error('❌ Mailer: Failed to initialize ethereal test mailer:', err.message);
-    }
-  }
-  return transporter;
-};
-
-const sendLoginEmail = async (userEmail, userName) => {
-  try {
-    const activeTransporter = await getTransporter();
-    if (!activeTransporter) return;
-
-    const mailOptions = {
-      from: `"${process.env.SMTP_FROM_NAME || 'Habit Mastery Terminal'}" <${process.env.SMTP_USER || 'no-reply@habitmastery.io'}>`,
-      to: userEmail,
-      subject: '🔒 Habit Mastery Terminal: New Login Detected',
-      text: `Hello ${userName || 'User'},\n\nWe detected a new login to your Habit Mastery Terminal account (${userEmail}) at ${new Date().toLocaleString()}.\n\nIf this was you, you can safely ignore this email.\n\nLevel Up Your Habits!\n- The Habit Mastery Terminal Team`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
-          <h2 style="color: #6366f1; margin-top: 0;">🔒 New Login Detected</h2>
-          <p>Hello <strong>${userName || 'User'}</strong>,</p>
-          <p>We detected a new login to your <strong>Habit Mastery Terminal</strong> account (<code>${userEmail}</code>) at <strong>${new Date().toLocaleString()}</strong>.</p>
-          <p>If this was you, no action is required. Go build some habits!</p>
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-          <p style="font-size: 11px; color: #64748b; margin-bottom: 0;">This email was sent by the Habit Mastery Terminal notification system. If you did not log in, please reset your password immediately.</p>
-        </div>
-      `
-    };
-
-    const info = await activeTransporter.sendMail(mailOptions);
-    console.log(`✉️ Login email sent to: ${userEmail}. Message ID: ${info.messageId}`);
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) console.log(`✉️ Email Preview Link: ${previewUrl}`);
-  } catch (err) {
-    console.error('❌ Mailer: Error sending login notification email:', err.message);
-  }
-};
-
-const sendRegisterEmail = async (userEmail, userName) => {
-  try {
-    const response = await EmailService.sendWelcomeEmail(userEmail, userName || userEmail.split('@')[0]);
-    console.log(`✉️ Welcome email sent via SMTP to: ${userEmail}. Result:`, response);
-  } catch (err) {
-    console.error('❌ SMTP: Error sending welcome email:', err.message);
-  }
-};
+import { NotificationService, pushLogs } from './notificationService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'replace-with-secure-secret';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '4h';
@@ -123,7 +44,7 @@ const createUserProfile = (email, name = '') => ({
   themeMode: 'light',
   isMuted: false,
   unlockedAchievements: [],
-  emailVerified: false,
+  emailVerified: true,
   phoneVerified: false,
   phoneNumber: '',
   tasks: [],
@@ -142,7 +63,8 @@ const getOrInitUser = (email, name = '') => {
       habitList: [],
       customPages: [],
       calendar: [],
-      goal: { title: '', targetDate: '' }
+      goal: { title: '', targetDate: '' },
+      pushSubscriptions: []
     };
   }
   return localDB[key];
@@ -166,11 +88,20 @@ if (mongoURI) {
 }
 
 // Schemas & Models
+const PushSubscriptionSchema = new mongoose.Schema({
+  endpoint: String,
+  keys: {
+    p256dh: String,
+    auth: String
+  },
+  createdAt: { type: Date, default: Date.now }
+});
+
 const UserDataSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   passwordHash: { type: String, select: false },
   phoneNumber: { type: String, default: '' },
-  emailVerified: { type: Boolean, default: false },
+  emailVerified: { type: Boolean, default: true },
   phoneVerified: { type: Boolean, default: false },
   profile: { type: Object, default: {} },
   habits: { type: Object, default: {} },
@@ -178,10 +109,7 @@ const UserDataSchema = new mongoose.Schema({
   customPages: { type: Array, default: [] },
   calendar: { type: Array, default: [] },
   goal: { type: Object, default: {} },
-  verificationCode: { type: String },
-  verificationExpires: { type: Date },
-  resetCode: { type: String },
-  resetExpires: { type: Date },
+  pushSubscriptions: [PushSubscriptionSchema],
   updatedAt: { type: Date, default: Date.now }
 });
 
@@ -479,111 +407,7 @@ app.post('/api/goal', async (req, res) => {
 });
 
 // --- Authentication Routes ---
-app.post('/api/auth/initiate-verify', async (req, res) => {
-  const { email } = req.body;
-  const targetEmail = (email || '').toLowerCase().trim();
-  if (!targetEmail || !targetEmail.includes('@')) {
-    return res.status(400).json({ error: 'Please enter a valid email address.' });
-  }
-
-  try {
-    let user = null;
-    let hadPassword = false;
-
-    if (isConnectedToMongo) {
-      user = await UserData.findOne({ email: targetEmail });
-      if (!user) {
-        // Initialize stub profile for new email registration
-        const profile = createUserProfile(targetEmail);
-        profile.isProfileSetupComplete = false; // flag to trigger setup popup
-        user = await UserData.create({
-          email: targetEmail,
-          passwordHash: null,
-          phoneNumber: '',
-          emailVerified: false,
-          phoneVerified: false,
-          profile,
-          habitList: [],
-          customPages: [],
-          calendar: [],
-          goal: { title: '', targetDate: '' }
-        });
-      } else {
-        hadPassword = !!user.passwordHash;
-      }
-    } else {
-      user = localDB[targetEmail];
-      if (!user) {
-        user = getOrInitUser(targetEmail);
-        user.profile.isProfileSetupComplete = false;
-      } else {
-        hadPassword = !!user.passwordHash;
-      }
-    }
-
-    // Generate 6 digit code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
-
-    user.verificationCode = code;
-    user.verificationExpires = expires;
-
-    if (isConnectedToMongo) {
-      await user.save();
-    }
-
-    // Send email via SMTP
-    try {
-      await EmailService.sendVerificationEmail(targetEmail, code);
-      console.log(`✉️ Verification code sent to: ${targetEmail}. Code: ${code}`);
-    } catch (mailErr) {
-      console.error('❌ SMTP: Error sending verification email:', mailErr.message);
-    }
-
-    return res.json({ success: true, isNewUser: !hadPassword, code });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/api/auth/confirm-verify', async (req, res) => {
-  const { email, code } = req.body;
-  const targetEmail = (email || '').toLowerCase().trim();
-  if (!targetEmail || !code) {
-    return res.status(400).json({ error: 'Email and verification code are required.' });
-  }
-
-  try {
-    let user = null;
-    if (isConnectedToMongo) {
-      user = await UserData.findOne({ email: targetEmail });
-    } else {
-      user = localDB[targetEmail];
-    }
-
-    if (!user || user.verificationCode !== code || new Date() > new Date(user.verificationExpires)) {
-      return res.status(400).json({ error: 'Invalid or expired verification code.' });
-    }
-
-    // Clear verification codes, set emailVerified
-    user.verificationCode = undefined;
-    user.verificationExpires = undefined;
-    user.emailVerified = true;
-    if (!user.profile) user.profile = {};
-    user.profile.emailVerified = true;
-
-    if (isConnectedToMongo) {
-      user.markModified('profile');
-      await user.save();
-    }
-
-    const isNewUser = !user.passwordHash;
-    return res.json({ success: true, isNewUser });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
+// --- Authentication Routes ---
 app.post('/api/auth/set-password', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password || password.length < 8) {
@@ -600,33 +424,60 @@ app.post('/api/auth/set-password', async (req, res) => {
       user = localDB[targetEmail];
     }
 
-    if (!user || !user.emailVerified) {
-      return res.status(400).json({ error: 'Email address must be verified first.' });
+    if (user && user.passwordHash) {
+      return res.status(400).json({ error: 'An account with this email address already exists. Please log in.' });
     }
 
     // Save password hash
     const passwordHash = await bcrypt.hash(password, 12);
-    user.passwordHash = passwordHash;
 
-    if (isConnectedToMongo) {
-      await user.save();
+    if (!user) {
+      // Create user and profile directly
+      const profile = createUserProfile(targetEmail);
+      profile.isProfileSetupComplete = false;
+      profile.emailVerified = true; // Instant verification
+      
+      const newUserData = {
+        email: targetEmail,
+        passwordHash,
+        phoneNumber: '',
+        emailVerified: true,
+        phoneVerified: false,
+        profile,
+        habitList: [],
+        customPages: [],
+        calendar: [],
+        goal: { title: '', targetDate: '' },
+        pushSubscriptions: []
+      };
+
+      if (isConnectedToMongo) {
+        user = await UserData.create(newUserData);
+      } else {
+        localDB[targetEmail] = newUserData;
+        user = localDB[targetEmail];
+      }
+    } else {
+      // Update stub user credentials
+      user.passwordHash = passwordHash;
+      user.emailVerified = true;
+      if (!user.profile) user.profile = createUserProfile(targetEmail);
+      user.profile.emailVerified = true;
+      if (isConnectedToMongo) {
+        user.markModified('profile');
+        await user.save();
+      }
     }
 
     // Generate login token
     const token = createToken(user);
-
-    // Send welcome email
-    try {
-      await EmailService.sendWelcomeEmail(targetEmail, user.profile?.displayName || targetEmail.split('@')[0]);
-    } catch (mailErr) {
-      console.error('❌ SMTP: Error sending welcome email:', mailErr.message);
-    }
 
     return res.json({ success: true, token, ...buildUserPayload(user) });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 });
+
 
 app.post('/api/auth/password-login', async (req, res) => {
   const { email, password } = req.body;
@@ -741,173 +592,6 @@ app.post('/api/auth/google', authRateLimiter, async (req, res) => {
   }
 });
 
-// POST Forgot Password
-app.post('/api/auth/forgot-password', authRateLimiter, async (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    return res.status(400).json({ error: 'Email address is required.' });
-  }
-  const normalizedEmail = email.toLowerCase().trim();
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
-
-  try {
-    let userExist = false;
-    if (isConnectedToMongo) {
-      const user = await UserData.findOne({ email: normalizedEmail });
-      if (user) {
-        user.resetCode = code;
-        user.resetExpires = expires;
-        await user.save();
-        userExist = true;
-      }
-    } else {
-      const user = localDB[normalizedEmail];
-      if (user) {
-        user.resetCode = code;
-        user.resetExpires = expires;
-        userExist = true;
-      }
-    }
-
-    if (!userExist) {
-      return res.status(404).json({ error: 'No account registered with this email address.' });
-    }
-
-    // Send email via SMTP
-    try {
-      const response = await EmailService.sendPasswordResetEmail(normalizedEmail, code);
-      console.log(`🔑 Reset code sent via SMTP to: ${normalizedEmail}. Result:`, response);
-    } catch (mailErr) {
-      console.error('❌ SMTP: Error sending password reset email:', mailErr.message);
-    }
-
-    return res.json({ success: true, message: 'Reset code dispatched successfully.' });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// POST Reset Password
-app.post('/api/auth/reset-password', authRateLimiter, async (req, res) => {
-  const { email, code, newPassword } = req.body;
-  if (!email || !code || !newPassword || newPassword.length < 8) {
-    return res.status(400).json({ error: 'All fields are required. Passwords must be at least 8 characters long.' });
-  }
-  const normalizedEmail = email.toLowerCase().trim();
-
-  try {
-    let user = null;
-    if (isConnectedToMongo) {
-      user = await UserData.findOne({ email: normalizedEmail });
-    } else {
-      user = localDB[normalizedEmail];
-    }
-
-    if (!user || user.resetCode !== code || new Date() > new Date(user.resetExpires)) {
-      return res.status(400).json({ error: 'Invalid or expired password reset verification code.' });
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 12);
-    user.passwordHash = passwordHash;
-    user.resetCode = undefined;
-    user.resetExpires = undefined;
-
-    if (isConnectedToMongo) {
-      await user.save();
-    }
-
-    return res.json({ success: true, message: 'Password has been updated successfully.' });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// POST Send Verification Email
-app.post('/api/auth/send-verification', authRateLimiter, async (req, res) => {
-  const { email } = req.body;
-  const targetEmail = (email || '').toLowerCase().trim();
-  if (!targetEmail) {
-    return res.status(400).json({ error: 'Email address is required.' });
-  }
-
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
-
-  try {
-    let userExist = false;
-    if (isConnectedToMongo) {
-      const user = await UserData.findOne({ email: targetEmail });
-      if (user) {
-        user.verificationCode = code;
-        user.verificationExpires = expires;
-        await user.save();
-        userExist = true;
-      }
-    } else {
-      const user = localDB[targetEmail];
-      if (user) {
-        user.verificationCode = code;
-        user.verificationExpires = expires;
-        userExist = true;
-      }
-    }
-
-    if (!userExist) {
-      return res.status(404).json({ error: 'Account not found.' });
-    }
-
-    // Send email via SMTP
-    try {
-      const response = await EmailService.sendVerificationEmail(targetEmail, code);
-      console.log(`✉️ Verification code sent via SMTP to: ${targetEmail}. Result:`, response);
-    } catch (mailErr) {
-      console.error('❌ SMTP: Error sending verification email:', mailErr.message);
-    }
-
-    return res.json({ success: true, message: 'Verification code sent.', code });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// POST Verify Email Code
-app.post('/api/auth/verify-email-code', authRateLimiter, async (req, res) => {
-  const { email, code } = req.body;
-  const targetEmail = (email || '').toLowerCase().trim();
-  if (!targetEmail || !code) {
-    return res.status(400).json({ error: 'Email and verification code are required.' });
-  }
-
-  try {
-    let user = null;
-    if (isConnectedToMongo) {
-      user = await UserData.findOne({ email: targetEmail });
-    } else {
-      user = localDB[targetEmail];
-    }
-
-    if (!user || user.verificationCode !== code || new Date() > new Date(user.verificationExpires)) {
-      return res.status(400).json({ error: 'Invalid or expired email verification code.' });
-    }
-
-    user.verificationCode = undefined;
-    user.verificationExpires = undefined;
-    if (!user.profile) user.profile = {};
-    user.profile.emailVerified = true;
-    user.emailVerified = true;
-
-    if (isConnectedToMongo) {
-      user.markModified('profile');
-      await user.save();
-    }
-
-    return res.json({ success: true, profile: user.profile });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
 // POST Verify Password (for dangerous operations confirmation)
 app.post('/api/auth/verify-password', authRateLimiter, async (req, res) => {
   const { email, password } = req.body;
@@ -939,24 +623,17 @@ app.post('/api/auth/verify-password', authRateLimiter, async (req, res) => {
   }
 });
 
-// POST Submit Support Ticket & Dispatch Emails
+// POST Submit Support Ticket
 app.post('/api/support/ticket', async (req, res) => {
   const { email, displayName, message } = req.body;
   if (!email || !displayName || !message) {
     return res.status(400).json({ error: 'All fields are required.' });
   }
-
   try {
-    // Send confirmation to user
-    await EmailService.sendSupportTicketConfirmation(email.trim(), displayName.trim(), message.trim());
-    
-    // Notify developers
-    await EmailService.sendDeveloperTicketNotification(email.trim(), displayName.trim(), message.trim());
-
+    console.log(`🎟️ Support Ticket Acknowledged from ${displayName} (${email}): ${message}`);
     return res.json({ success: true });
   } catch (err) {
-    console.error('❌ Support Ticket Email: Failed to dispatch:', err.message);
-    return res.status(500).json({ error: 'Failed to process support ticket: ' + err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -1307,6 +984,97 @@ app.post('/api/ai/planner', async (req, res) => {
   });
 });
 
+// GET VAPID Public Key
+app.get('/api/system/vapid-key', (req, res) => {
+  return res.json({ publicKey: NotificationService.getPublicKey() });
+});
+
+// POST Subscribe to Push Notifications
+app.post('/api/notifications/subscribe', async (req, res) => {
+  const { subscription } = req.body;
+  if (!subscription || !subscription.endpoint) {
+    return res.status(400).json({ error: 'Subscription object with endpoint is required.' });
+  }
+
+  const userEmail = req.user.email;
+
+  try {
+    let user = null;
+    if (isConnectedToMongo) {
+      user = await UserData.findOne({ email: userEmail });
+      if (user) {
+        // Avoid duplicate subscriptions
+        const exists = user.pushSubscriptions.some(sub => sub.endpoint === subscription.endpoint);
+        if (!exists) {
+          user.pushSubscriptions.push(subscription);
+          await user.save();
+        }
+      }
+    } else {
+      user = localDB[userEmail];
+      if (user) {
+        if (!user.pushSubscriptions) user.pushSubscriptions = [];
+        const exists = user.pushSubscriptions.some(sub => sub.endpoint === subscription.endpoint);
+        if (!exists) {
+          user.pushSubscriptions.push(subscription);
+        }
+      }
+    }
+
+    console.log(`🤖 WebPush: Registered push subscription for ${userEmail}`);
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST Send Test Push Notification
+app.post('/api/notifications/test-push', async (req, res) => {
+  const userEmail = req.user.email;
+  try {
+    let user = null;
+    if (isConnectedToMongo) {
+      user = await UserData.findOne({ email: userEmail });
+    } else {
+      user = localDB[userEmail];
+    }
+
+    if (!user || !user.pushSubscriptions || user.pushSubscriptions.length === 0) {
+      return res.status(400).json({ error: 'No active push subscriptions found for this user.' });
+    }
+
+    const payload = {
+      title: '⚡ LevelUp System Sync',
+      body: 'Browser push notification system online and verified!',
+      url: '/#dashboard'
+    };
+
+    let sentCount = 0;
+    const cleanSubscriptions = [];
+
+    for (const sub of user.pushSubscriptions) {
+      const resVal = await NotificationService.sendPushNotification(sub, payload);
+      if (resVal.success) {
+        sentCount++;
+        cleanSubscriptions.push(sub);
+      } else if (!resVal.expired) {
+        cleanSubscriptions.push(sub);
+      }
+    }
+
+    if (isConnectedToMongo) {
+      user.pushSubscriptions = cleanSubscriptions;
+      await user.save();
+    } else {
+      user.pushSubscriptions = cleanSubscriptions;
+    }
+
+    return res.json({ success: true, sentCount, totalSubscriptions: cleanSubscriptions.length });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // System Diagnostics Endpoint
 app.get('/api/system/diagnostics', async (req, res) => {
   try {
@@ -1318,7 +1086,8 @@ app.get('/api/system/diagnostics', async (req, res) => {
       hasProfile: !!u.profile,
       timezone: u.profile?.timezone || 'Asia/Kolkata',
       habitReminders: u.profile?.habitReminders || {},
-      habitList: u.habitList || []
+      habitList: u.habitList || [],
+      pushSubscriptionsCount: u.pushSubscriptions?.length || 0
     }));
 
     return res.json({
@@ -1326,11 +1095,7 @@ app.get('/api/system/diagnostics', async (req, res) => {
       isConnectedToMongo,
       sentRemindersCache,
       lastProfileSyncs,
-      emailLogs,
-      smtpConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
-      smtpEmailValue: process.env.EMAIL_USER || 'NOT_SET',
-      smtpStartupStatus,
-      smtpStartupError,
+      pushLogs,
       websiteUrlConfig: process.env.WEBSITE_URL || 'NOT_SET',
       diagnostics
     });
@@ -1433,12 +1198,33 @@ const sendHabitReminders = async () => {
             const recipient = u.email;
             const displayName = profile.displayName || 'LevelUp User';
 
-            console.log(`⏰ Snooze Reminder: dispatching to ${recipient} for incomplete: "${habitName}" at ${formattedTime} (Diff: ${diffMinutes}m, First Today: ${!hasSentToday})`);
+            console.log(`⏰ Push Reminder: dispatching to ${recipient} for incomplete: "${habitName}" at ${formattedTime} (Diff: ${diffMinutes}m, First Today: ${!hasSentToday})`);
             
             try {
-              await EmailService.sendHabitReminderEmail(recipient, displayName, habitName);
-            } catch (mailErr) {
-              console.error(`❌ SMTP: Failed to send snooze reminder to ${recipient}:`, mailErr.message);
+              const payload = {
+                title: '⏰ Habit Reminder',
+                body: `It's time to complete your habit: "${habitName}"`,
+                url: '/#habits'
+              };
+
+              if (u.pushSubscriptions && u.pushSubscriptions.length > 0) {
+                const cleanSubscriptions = [];
+                for (const sub of u.pushSubscriptions) {
+                  const resVal = await NotificationService.sendPushNotification(sub, payload);
+                  if (resVal.success || !resVal.expired) {
+                    cleanSubscriptions.push(sub);
+                  }
+                }
+                
+                // Save updated active subscriptions list
+                if (isConnectedToMongo) {
+                  await UserData.updateOne({ email: u.email }, { $set: { pushSubscriptions: cleanSubscriptions } });
+                } else {
+                  u.pushSubscriptions = cleanSubscriptions;
+                }
+              }
+            } catch (pushErr) {
+              console.error(`❌ WebPush: Failed to send reminder to ${recipient}:`, pushErr.message);
             }
           }
         }
