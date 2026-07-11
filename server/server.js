@@ -788,6 +788,8 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
 
 const callGemini = callAI;
 
+export const lastAiErrors = {};
+
 // AI Coach Response Generator Endpoint
 app.post('/api/ai/coach', async (req, res) => {
   const { message, stats, email, displayName } = req.body;
@@ -837,6 +839,7 @@ app.post('/api/ai/coach', async (req, res) => {
       return res.json({ reply: reply.trim() });
     }
   } catch (err) {
+    lastAiErrors.coach = err.message;
     console.error('⚠️ Gemini AI Coach Error:', err.message);
   }
 
@@ -900,6 +903,7 @@ app.post('/api/ai/notion', async (req, res) => {
       }
     }
   } catch (err) {
+    lastAiErrors.notion = err.message;
     console.error('⚠️ Gemini Task Generator Error:', err.message);
   }
 
@@ -990,6 +994,7 @@ app.post('/api/ai/planner', async (req, res) => {
       }
     }
   } catch (err) {
+    lastAiErrors.planner = err.message;
     console.error('⚠️ Gemini Planner Error:', err.message);
   }
 
@@ -1117,6 +1122,7 @@ app.get('/api/system/diagnostics', async (req, res) => {
       isConnectedToMongo,
       hasGeminiKey: !!process.env.GEMINI_API_KEY,
       hasNvidiaKey: !!process.env.NVIDIA_API_KEY,
+      lastAiErrors,
       sentRemindersCache,
       lastProfileSyncs,
       pushLogs,
