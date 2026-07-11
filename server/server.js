@@ -11,10 +11,6 @@ dotenv.config();
 
 import { EmailService, emailLogs } from './emailService.js';
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error('RESEND_API_KEY is missing in environmental variables. Integration failed.');
-}
-
 import nodemailer from 'nodemailer';
 
 let transporter = null;
@@ -88,9 +84,9 @@ const sendLoginEmail = async (userEmail, userName) => {
 const sendRegisterEmail = async (userEmail, userName) => {
   try {
     const response = await EmailService.sendWelcomeEmail(userEmail, userName || userEmail.split('@')[0]);
-    console.log(`✉️ Welcome email sent via Resend to: ${userEmail}. Result:`, response);
+    console.log(`✉️ Welcome email sent via SMTP to: ${userEmail}. Result:`, response);
   } catch (err) {
-    console.error('❌ Resend: Error sending welcome email:', err.message);
+    console.error('❌ SMTP: Error sending welcome email:', err.message);
   }
 };
 
@@ -536,12 +532,12 @@ app.post('/api/auth/initiate-verify', async (req, res) => {
       await user.save();
     }
 
-    // Send email via Resend
+    // Send email via SMTP
     try {
       await EmailService.sendVerificationEmail(targetEmail, code);
       console.log(`✉️ Verification code sent to: ${targetEmail}. Code: ${code}`);
     } catch (mailErr) {
-      console.error('❌ Resend: Error sending verification email:', mailErr.message);
+      console.error('❌ SMTP: Error sending verification email:', mailErr.message);
     }
 
     return res.json({ success: true, isNewUser: !hadPassword, code });
@@ -623,7 +619,7 @@ app.post('/api/auth/set-password', async (req, res) => {
     try {
       await EmailService.sendWelcomeEmail(targetEmail, user.profile?.displayName || targetEmail.split('@')[0]);
     } catch (mailErr) {
-      console.error('❌ Resend: Error sending welcome email:', mailErr.message);
+      console.error('❌ SMTP: Error sending welcome email:', mailErr.message);
     }
 
     return res.json({ success: true, token, ...buildUserPayload(user) });
@@ -778,12 +774,12 @@ app.post('/api/auth/forgot-password', authRateLimiter, async (req, res) => {
       return res.status(404).json({ error: 'No account registered with this email address.' });
     }
 
-    // Send email via Resend
+    // Send email via SMTP
     try {
       const response = await EmailService.sendPasswordResetEmail(normalizedEmail, code);
-      console.log(`🔑 Reset code sent via Resend to: ${normalizedEmail}. Result:`, response);
+      console.log(`🔑 Reset code sent via SMTP to: ${normalizedEmail}. Result:`, response);
     } catch (mailErr) {
-      console.error('❌ Resend: Error sending password reset email:', mailErr.message);
+      console.error('❌ SMTP: Error sending password reset email:', mailErr.message);
     }
 
     return res.json({ success: true, message: 'Reset code dispatched successfully.' });
@@ -861,12 +857,12 @@ app.post('/api/auth/send-verification', authRateLimiter, async (req, res) => {
       return res.status(404).json({ error: 'Account not found.' });
     }
 
-    // Send email via Resend
+    // Send email via SMTP
     try {
       const response = await EmailService.sendVerificationEmail(targetEmail, code);
-      console.log(`✉️ Verification code sent via Resend to: ${targetEmail}. Result:`, response);
+      console.log(`✉️ Verification code sent via SMTP to: ${targetEmail}. Result:`, response);
     } catch (mailErr) {
-      console.error('❌ Resend: Error sending verification email:', mailErr.message);
+      console.error('❌ SMTP: Error sending verification email:', mailErr.message);
     }
 
     return res.json({ success: true, message: 'Verification code sent.', code });
@@ -1331,8 +1327,8 @@ app.get('/api/system/diagnostics', async (req, res) => {
       sentRemindersCache,
       lastProfileSyncs,
       emailLogs,
-      smtpConfigured: !!(process.env.SMTP_EMAIL && (process.env.SMTP_PASSWORD || process.env.SMTP_PASS || process.env.SENDER_PASSWORD)),
-      smtpEmailValue: process.env.SMTP_EMAIL || process.env.SMTP_USER || process.env.SENDER_EMAIL || 'NOT_SET',
+      smtpConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
+      smtpEmailValue: process.env.EMAIL_USER || 'NOT_SET',
       websiteUrlConfig: process.env.WEBSITE_URL || 'NOT_SET',
       diagnostics
     });
@@ -1440,7 +1436,7 @@ const sendHabitReminders = async () => {
             try {
               await EmailService.sendHabitReminderEmail(recipient, displayName, habitName);
             } catch (mailErr) {
-              console.error(`❌ Resend: Failed to send snooze reminder to ${recipient}:`, mailErr.message);
+              console.error(`❌ SMTP: Failed to send snooze reminder to ${recipient}:`, mailErr.message);
             }
           }
         }

@@ -1,106 +1,57 @@
-import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 
 export const emailLogs = [];
 
-const getResendInstance = () => {
-  const smtpEmail = process.env.SMTP_EMAIL || process.env.SMTP_USER || process.env.SENDER_EMAIL;
-  const smtpPass = process.env.SMTP_PASSWORD || process.env.SMTP_PASS || process.env.SENDER_PASSWORD;
+let transporter = null;
 
-  if (smtpEmail && smtpPass) {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: smtpEmail,
-        pass: smtpPass
-      }
-    });
+const getTransporter = () => {
+  if (transporter) return transporter;
 
-    return {
-      emails: {
-        send: async (options) => {
-          try {
-            // Reformat from address for Gmail SMTP to match from email or display name
-            const fromField = smtpEmail;
-            const result = await transporter.sendMail({
-              from: fromField,
-              to: options.to,
-              subject: options.subject,
-              html: options.html
-            });
-            emailLogs.push({
-              time: new Date().toISOString(),
-              to: options.to,
-              subject: options.subject,
-              status: 'success',
-              result
-            });
-            if (emailLogs.length > 50) emailLogs.shift();
-            return { data: result, error: null };
-          } catch (err) {
-            emailLogs.push({
-              time: new Date().toISOString(),
-              to: options.to,
-              subject: options.subject,
-              status: 'error',
-              error: err.message
-            });
-            if (emailLogs.length > 50) emailLogs.shift();
-            return { data: null, error: { message: err.message } };
-          }
-        }
-      }
-    };
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+
+  if (!user || !pass) {
+    throw new Error('EMAIL_USER or EMAIL_PASS environment variables are missing. Gmail SMTP cannot be initialized.');
   }
 
-  // Fallback to Resend
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY is missing in environmental variables. Integration failed.');
-  }
-  const client = new Resend(apiKey);
-  return {
-    emails: {
-      send: async (options) => {
-        try {
-          const result = await client.emails.send(options);
-          if (result.error) {
-            emailLogs.push({
-              time: new Date().toISOString(),
-              to: options.to,
-              subject: options.subject,
-              status: 'error',
-              error: result.error.message
-            });
-          } else {
-            emailLogs.push({
-              time: new Date().toISOString(),
-              to: options.to,
-              subject: options.subject,
-              status: 'success',
-              result
-            });
-          }
-          if (emailLogs.length > 50) emailLogs.shift();
-          return result;
-        } catch (err) {
-          emailLogs.push({
-            time: new Date().toISOString(),
-            to: options.to,
-            subject: options.subject,
-            status: 'error',
-            error: err.message
-          });
-          if (emailLogs.length > 50) emailLogs.shift();
-          throw err;
-        }
-      }
-    }
-  };
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass }
+  });
+
+  return transporter;
 };
 
-const getFromEmail = () => {
-  return process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const sendEmail = async ({ to, subject, html }) => {
+  const from = process.env.EMAIL_USER;
+  try {
+    const client = getTransporter();
+    const result = await client.sendMail({
+      from,
+      to,
+      subject,
+      html
+    });
+    emailLogs.push({
+      time: new Date().toISOString(),
+      to,
+      subject,
+      status: 'success',
+      result
+    });
+    if (emailLogs.length > 50) emailLogs.shift();
+    return result;
+  } catch (err) {
+    emailLogs.push({
+      time: new Date().toISOString(),
+      to,
+      subject,
+      status: 'error',
+      error: err.message
+    });
+    if (emailLogs.length > 50) emailLogs.shift();
+    throw err;
+  }
 };
 
 const getWebsiteUrl = () => {
@@ -112,11 +63,8 @@ const getWebsiteUrl = () => {
 
 export const EmailService = {
   sendWelcomeEmail: async (toEmail, displayName) => {
-    const resend = getResendInstance();
-    const from = getFromEmail();
     const websiteUrl = getWebsiteUrl();
-    return await resend.emails.send({
-      from,
+    return await sendEmail({
       to: toEmail,
       subject: '🚀 Welcome to LevelUp - System Initialized!',
       html: `
@@ -134,11 +82,8 @@ export const EmailService = {
   },
 
   sendVerificationEmail: async (toEmail, code) => {
-    const resend = getResendInstance();
-    const from = getFromEmail();
     const websiteUrl = getWebsiteUrl();
-    return await resend.emails.send({
-      from,
+    return await sendEmail({
       to: toEmail,
       subject: '✉️ LevelUp: Verify Your Email Address',
       html: `
@@ -158,11 +103,8 @@ export const EmailService = {
   },
 
   sendPasswordResetEmail: async (toEmail, code) => {
-    const resend = getResendInstance();
-    const from = getFromEmail();
     const websiteUrl = getWebsiteUrl();
-    return await resend.emails.send({
-      from,
+    return await sendEmail({
       to: toEmail,
       subject: '🔑 LevelUp: Password Reset Request',
       html: `
@@ -182,10 +124,7 @@ export const EmailService = {
   },
 
   sendDailyTaskReminder: async (toEmail, displayName, tasks = []) => {
-    const resend = getResendInstance();
-    const from = getFromEmail();
     const websiteUrl = getWebsiteUrl();
-    
     let taskListHtml = '';
     if (tasks.length > 0) {
       taskListHtml = `<ul style="text-align: left; line-height: 1.6; margin: 0; padding-left: 20px;">` + 
@@ -195,8 +134,7 @@ export const EmailService = {
       taskListHtml = `<p style="color: #9ca3af; font-style: italic; margin: 0;">No active tasks in your list today! Deploy new milestones to continue leveling up.</p>`;
     }
 
-    return await resend.emails.send({
-      from,
+    return await sendEmail({
       to: toEmail,
       subject: '📅 LevelUp: Your Daily Task Reminder',
       html: `
@@ -216,14 +154,10 @@ export const EmailService = {
   },
 
   sendWeeklyProgressReport: async (toEmail, displayName, progressStats) => {
-    const resend = getResendInstance();
-    const from = getFromEmail();
     const websiteUrl = getWebsiteUrl();
-    
     const { xpEarned = 0, tasksCompleted = 0, habitsMaintained = 0, readinessDelta = 0 } = progressStats;
 
-    return await resend.emails.send({
-      from,
+    return await sendEmail({
       to: toEmail,
       subject: '📈 LevelUp: Your Weekly Progress Report',
       html: `
@@ -246,11 +180,8 @@ export const EmailService = {
   },
 
   sendAchievementNotification: async (toEmail, displayName, achievementName, xpReward) => {
-    const resend = getResendInstance();
-    const from = getFromEmail();
     const websiteUrl = getWebsiteUrl();
-    return await resend.emails.send({
-      from,
+    return await sendEmail({
       to: toEmail,
       subject: '🏆 Achievement Unlocked: ' + achievementName,
       html: `
@@ -271,10 +202,7 @@ export const EmailService = {
   },
 
   sendSupportTicketConfirmation: async (toEmail, displayName, message) => {
-    const resend = getResendInstance();
-    const from = getFromEmail();
-    return await resend.emails.send({
-      from,
+    return await sendEmail({
       to: toEmail,
       subject: '🎟️ LevelUp Support: Ticket Received',
       html: `
@@ -295,11 +223,9 @@ export const EmailService = {
   },
 
   sendDeveloperTicketNotification: async (fromUserEmail, fromUserName, message) => {
-    const resend = getResendInstance();
-    const from = getFromEmail();
-    return await resend.emails.send({
-      from,
-      to: from,
+    const toEmail = process.env.EMAIL_USER;
+    return await sendEmail({
+      to: toEmail,
       subject: `🚨 LevelUp SUPPORT: New Ticket from ${fromUserName}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e11d48; border-radius: 10px; background-color: #030712; color: #f3f4f6;">
@@ -317,10 +243,7 @@ export const EmailService = {
   },
 
   sendHabitReminderEmail: async (toEmail, displayName, habitName) => {
-    const resend = getResendInstance();
-    const from = getFromEmail();
     const websiteUrl = getWebsiteUrl();
-    
     const MOTIVATIONAL_PHRASES = [
       "Consistency is the foundation of virtue. Do it for your future self!",
       "Small daily habits compound into massive lifetime gains. You can do this!",
@@ -332,8 +255,7 @@ export const EmailService = {
     ];
     const phrase = MOTIVATIONAL_PHRASES[Math.floor(Math.random() * MOTIVATIONAL_PHRASES.length)];
 
-    return await resend.emails.send({
-      from,
+    return await sendEmail({
       to: toEmail,
       subject: `⏰ Reminder: Time for "${habitName}"`,
       html: `
