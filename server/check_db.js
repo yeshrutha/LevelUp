@@ -4,20 +4,24 @@ const MONGODB_URI = 'mongodb+srv://yeshruthagowda_db_user:Yeshrutha1609@yeshruth
 const UserDataSchema = new mongoose.Schema({
   email: String,
   profile: Object,
-  pushSubscriptions: Array
+  pushSubscriptions: Array,
+  habitList: Array,
+  habits: Object,
+  updatedAt: Date
 });
 
 const UserData = mongoose.model('UserData', UserDataSchema, 'userdatas');
 
 async function run() {
   await mongoose.connect(MONGODB_URI);
-  const users = await UserData.find({});
-  for (const u of users) {
+  const u = await UserData.findOne({ email: 'yeshruthagowda@gmail.com' });
+  if (u) {
     console.log(`Email: ${u.email}`);
-    console.log(`DisplayName: ${u.profile?.displayName}`);
-    console.log(`Subscriptions Count: ${u.pushSubscriptions?.length || 0}`);
-    console.log(`Subscriptions:`, JSON.stringify(u.pushSubscriptions));
-    console.log('-------------------------------------------');
+    console.log(`Habit List Checklist:`, JSON.stringify(u.habitList, null, 2));
+    console.log(`Habits Check log:`, JSON.stringify(u.habits, null, 2));
+    console.log(`Last Updated At: ${u.updatedAt}`);
+  } else {
+    console.log('User not found.');
   }
   await mongoose.disconnect();
 }

@@ -733,6 +733,14 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
     console.log(`[AI TRACE] Raw System Instruction:`, systemInstruction);
     console.log(`[AI TRACE] Raw User Prompt:`, userPrompt);
 
+    aiPlannerTraceLogs.push({
+      time: new Date().toISOString(),
+      step: 'NVIDIA_REQUEST',
+      model: targetModel,
+      userPrompt
+    });
+    if (aiPlannerTraceLogs.length > 50) aiPlannerTraceLogs.shift();
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -757,6 +765,13 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content;
     console.log(`[AI TRACE] Raw response received from NVIDIA:`, text);
+
+    aiPlannerTraceLogs.push({
+      time: new Date().toISOString(),
+      step: 'NVIDIA_RESPONSE',
+      content: text
+    });
+    if (aiPlannerTraceLogs.length > 50) aiPlannerTraceLogs.shift();
 
     if (!text) {
       throw new Error('Empty response content received from NVIDIA AI.');
@@ -804,6 +819,7 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
 const callGemini = callAI;
 
 export const lastAiErrors = {};
+export const aiPlannerTraceLogs = [];
 
 // AI Coach Response Generator Endpoint
 app.post('/api/ai/coach', async (req, res) => {
@@ -999,6 +1015,13 @@ app.post('/api/ai/planner', async (req, res) => {
     You must return ONLY the raw JSON structure, matching the JSON schema precisely.
   `;
 
+  aiPlannerTraceLogs.push({
+    time: new Date().toISOString(),
+    step: 'PLANNER_PROMPT_RECEIVED',
+    prompt
+  });
+  if (aiPlannerTraceLogs.length > 50) aiPlannerTraceLogs.shift();
+
   try {
     if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
       let responseText = await callGemini(systemInstruction, `Generate habits and calendar events for the prompt: "${prompt}"`, true);
@@ -1006,11 +1029,26 @@ app.post('/api/ai/planner', async (req, res) => {
       responseText = responseText.replace(/```json/i, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(responseText);
       console.log(`[AI PLANNER TRACE] Successfully parsed JSON:`, parsed);
+      
+      aiPlannerTraceLogs.push({
+        time: new Date().toISOString(),
+        step: 'PLANNER_JSON_PARSED',
+        parsed
+      });
+      if (aiPlannerTraceLogs.length > 50) aiPlannerTraceLogs.shift();
+
       if (parsed) {
         return res.json(parsed);
       }
     }
   } catch (err) {
+    aiPlannerTraceLogs.push({
+      time: new Date().toISOString(),
+      step: 'PLANNER_ERROR',
+      error: err.message
+    });
+    if (aiPlannerTraceLogs.length > 50) aiPlannerTraceLogs.shift();
+
     lastAiErrors.planner = err.message;
     console.error('⚠️ Gemini Planner Error:', err.message);
   }
@@ -1140,6 +1178,7 @@ app.get('/api/system/diagnostics', async (req, res) => {
       hasGeminiKey: !!process.env.GEMINI_API_KEY,
       hasNvidiaKey: !!process.env.NVIDIA_API_KEY,
       lastAiErrors,
+      aiPlannerTraceLogs,
       sentRemindersCache,
       lastProfileSyncs,
       pushLogs,
