@@ -5,13 +5,16 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://levelup-1-7j6
 export default function AIPlanner() {
   const { 
     user, 
+    setUser,
     createCustomPage, 
     addHabit, 
     addCalendarEvent, 
     setNotifications, 
     setCurrentTab, 
     triggerToast,
-    habitList
+    habitList,
+    setHabitList,
+    setCalendar
   } = useApp();
 
   const [prompt, setPrompt] = useState('');
@@ -66,34 +69,24 @@ export default function AIPlanner() {
       const data = await response.json();
       console.log(`[AI PLANNER CLIENT] Received response payload:`, data);
 
-      // 1. Add Habits
-      let habitsAdded = 0;
+      // Overwrite current environment state to strictly match AI response contents
+      let finalHabits = [];
       if (Array.isArray(data.habits)) {
-        console.log(`[AI PLANNER CLIENT] Parsing ${data.habits.length} habits:`, data.habits);
-        data.habits.forEach(h => {
-          console.log(`[AI PLANNER CLIENT] Adding habit item to checklist: "${h}"`);
-          if (!habitList.includes(h)) {
-            addHabit(h);
-            habitsAdded++;
-          } else {
-            console.log(`[AI PLANNER CLIENT] Habit already exists, skipping: "${h}"`);
-          }
-        });
+        finalHabits = [...data.habits];
       }
+      setHabitList(finalHabits);
 
-      // 2. Add Calendar Events
-      let eventsAdded = 0;
+      let finalEvents = [];
       if (Array.isArray(data.calendarEvents)) {
-        data.calendarEvents.forEach(e => {
-          addCalendarEvent({
-            title: e.title || "AI Milestone",
-            date: e.date || new Date().toISOString().split('T')[0],
-            type: e.type || "Goal",
-            time: e.time || "10:00 AM"
-          });
-          eventsAdded++;
-        });
+        finalEvents = data.calendarEvents.map(e => ({
+          id: Math.random().toString(),
+          title: e.title || "AI Milestone",
+          date: e.date || new Date().toISOString().split('T')[0],
+          type: e.type || "Goal",
+          time: e.time || "10:00 AM"
+        }));
       }
+      setCalendar(finalEvents);
 
       // 3. Trigger Notifications
       if (Array.isArray(data.notifications)) {
@@ -111,8 +104,8 @@ export default function AIPlanner() {
       }
 
       setResult({
-        habitsCount: habitsAdded || data.habits?.length || 0,
-        eventsCount: eventsAdded || data.calendarEvents?.length || 0
+        habitsCount: finalHabits.length,
+        eventsCount: finalEvents.length
       });
 
       triggerToast('Environment Deployed', 'Your personalized routine has been instantiated!', 'success');
