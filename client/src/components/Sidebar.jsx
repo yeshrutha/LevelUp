@@ -42,7 +42,7 @@ export const Sidebar = () => {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'habits', label: 'Habit Tracker', icon: CheckSquare },
     { id: 'calendar', label: 'Calendar Planner', icon: CalendarIcon },
-    { id: 'ai_planner', label: 'AI Planner', icon: Sparkles },
+    { id: 'ai_planner', label: 'AI Coach', icon: Sparkles },
     { id: 'analytics', label: 'Analytics Suite', icon: TrendingUp },
     { id: 'achievements', label: 'Achievements', icon: Award }
   ];
