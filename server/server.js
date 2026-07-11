@@ -495,13 +495,13 @@ app.post('/api/auth/password-login', async (req, res) => {
       if (isEmailInput) {
         user = await UserData.findOne({ email: targetEmail }).select('+passwordHash');
       } else {
-        user = await UserData.findOne({ displayName: { $regex: new RegExp(`^${identifier}$`, 'i') } }).select('+passwordHash');
+        user = await UserData.findOne({ "profile.displayName": { $regex: new RegExp(`^${identifier}$`, 'i') } }).select('+passwordHash');
       }
     } else {
       if (isEmailInput) {
         user = localDB[targetEmail];
       } else {
-        user = Object.values(localDB).find(u => u.displayName?.toLowerCase() === targetEmail);
+        user = Object.values(localDB).find(u => u.profile?.displayName?.toLowerCase() === targetEmail);
       }
     }
 
