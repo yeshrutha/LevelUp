@@ -749,7 +749,7 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
     }
     return text;
   } else if (geminiKey) {
-    const model = "gemini-3.5-flash";
+    const model = "gemini-1.5-flash";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
 
     const response = await fetch(url, {
