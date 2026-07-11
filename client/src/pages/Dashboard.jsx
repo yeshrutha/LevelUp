@@ -368,45 +368,57 @@ export const Dashboard = () => {
             
           </div>
 
-          {/* Telemetry Widgets: Streaks, Rate & Analytics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+          {/* Telemetry Widgets: Streaks, Rate & Analytics stacked rows */}
+          <div className="space-y-4 text-left">
             
-            {/* Habits Telemetry Card */}
-            <div className="glass-panel p-5 rounded-xl border-white/10 space-y-4 bg-slate-900/20">
-              <h3 className="text-xs font-futuristic font-bold text-white uppercase tracking-wider border-b border-white/5 pb-2 flex items-center gap-1.5">
-                <Flame size={14} className="text-orange-400 animate-pulse" /> Habit Consistency Stats
-              </h3>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+            {/* Habits Telemetry Card - Full-width horizontal row */}
+            <div className="glass-panel p-4 rounded-xl border-white/10 bg-slate-900/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="p-2.5 bg-orange-500/10 border border-orange-400/20 text-orange-400 rounded-lg">
+                  <Flame size={18} className="animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-futuristic font-bold text-white uppercase tracking-wider">Habit Consistency Tracker</h3>
+                  <p className="text-[9px] text-slate-500 uppercase font-display tracking-widest mt-0.5">Streaks & monthly rate index</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 sm:flex sm:items-center sm:gap-6 w-full sm:w-auto">
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center sm:min-w-[110px]">
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Streak</span>
                   <span className="text-xl md:text-2xl font-futuristic font-black text-slate-200 mt-1">{stats.currentStreak}d</span>
                 </div>
-                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center sm:min-w-[110px]">
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Max Streak</span>
                   <span className="text-xl md:text-2xl font-futuristic font-black text-slate-200 mt-1">{stats.longestStreak}d</span>
                 </div>
-                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center sm:min-w-[110px]">
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Month Rate</span>
                   <span className="text-xl md:text-2xl font-futuristic font-black text-cyan-400 mt-1">{stats.monthlyCompletionRate}%</span>
                 </div>
               </div>
             </div>
 
-            {/* Analytics Telemetry Card */}
-            <div className="glass-panel p-5 rounded-xl border-white/10 space-y-4 bg-slate-900/20">
-              <h3 className="text-xs font-futuristic font-bold text-white uppercase tracking-wider border-b border-white/5 pb-2 flex items-center gap-1.5">
-                <Activity size={14} className="text-cyan-400" /> Focus Analytics Stats
-              </h3>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+            {/* Analytics Telemetry Card - Full-width horizontal row below */}
+            <div className="glass-panel p-4 rounded-xl border-white/10 bg-slate-900/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="p-2.5 bg-cyan-500/10 border border-cyan-400/20 text-cyan-400 rounded-lg">
+                  <Activity size={18} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-futuristic font-bold text-white uppercase tracking-wider">Productivity Analytics</h3>
+                  <p className="text-[9px] text-slate-500 uppercase font-display tracking-widest mt-0.5">Focus hours & workspace index</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 sm:flex sm:items-center sm:gap-6 w-full sm:w-auto">
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center sm:min-w-[110px]">
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Week Focus</span>
                   <span className="text-xl md:text-2xl font-futuristic font-black text-slate-200 mt-1">{stats.weeklyFocusHours}h</span>
                 </div>
-                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center sm:min-w-[110px]">
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Today Pct</span>
                   <span className="text-xl md:text-2xl font-futuristic font-black text-slate-200 mt-1">{stats.todayCompletionRate}%</span>
                 </div>
-                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center sm:min-w-[110px]">
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Workspaces</span>
                   <span className="text-xl md:text-2xl font-futuristic font-black text-primary mt-1">{customPages.length}</span>
                 </div>
