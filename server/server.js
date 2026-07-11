@@ -1020,23 +1020,36 @@ app.post('/api/ai/planner', async (req, res) => {
   const { prompt } = req.body;
   
   const systemInstruction = `
-    You are the "LevelUp AI Planner Orchestrator", an advanced assistant in the Habit Mastery Terminal.
-    Your task is to analyze the user's detailed schedule request, career goals, routine, and targets, and generate habit checklist items and calendar events in English.
+    You are the "LevelUp AI Productivity Coach", an advanced assistant in the Habit Mastery Terminal.
+    Your task is to analyze the user's detailed schedule request, career goals, routine, and targets, and generate recommended schedules, habits, events, tips, wellness metrics, and weekly goals.
     You must output a JSON object with the following structure:
     {
-      "habits": [
-        // list of habits to add to the habit tracker (e.g., "Wake Up: 6:15 AM", "Revision Study Session", "Exercise at Gym", "Drink 3L Water", "Solve 1 LeetCode", "Valorant (Max 2 Games)")
-        // generate up to 8 recurring habits matching their daily schedule details and learning goals
+      "suggestedSchedule": [
+        // list of time blocks matching their daily schedule details and study suggestions
+        { "time": "08:00 AM", "task": "Wake Up", "description": "Hydrate and do light stretching" }
       ],
-      "calendarEvents": [
-        // list of up to 4 key milestones or daily study targets to add to the calendar
+      "suggestedHabits": [
+        // list of recommended habits to build consistency
+        { "title": "Drink Water", "description": "Maintain hydration by drinking 3L water daily", "xpReward": 10, "category": "Health", "time": "08:00 AM" }
+      ],
+      "suggestedCalendarEvents": [
+        // list of key milestones or focus study sessions
         // date format must be YYYY-MM-DD. Since today's year is 2026, schedule them in July/August/September 2026.
-        { "title": "Milestone title", "date": "2026-07-15", "type": "Goal", "time": "10:00 AM" }
+        { "title": "Rust Exam Prep", "date": "2026-07-20", "type": "Goal", "time": "09:00 AM" }
       ],
-      "notifications": [
-        // list of up to 3 welcome notifications/reminders
-        { "title": "Planner Synchronized", "body": "Custom notification message", "type": "system" }
-      ]
+      "productivityTips": [
+        // list of actionable focus tips
+        "Divide study blocks into 25-minute Pomodoros"
+      ],
+      "wellnessRecommendations": [
+        // list of health and break tips
+        "Take a 5-minute screen break every hour"
+      ],
+      "weeklyGoals": [
+        // list of clear weekly targets
+        "Solve 5 LeetCode problems"
+      ],
+      "productivityScore": 85 // estimated productivity score from 0-100 based on their current routine
     }
     
     Ensure all descriptions are in English, clear, and actionable.

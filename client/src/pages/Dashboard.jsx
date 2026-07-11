@@ -15,6 +15,7 @@ import {
   Bot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AttendanceTracker } from '../components/AttendanceTracker';
 
 export const Dashboard = () => {
   const { 
@@ -263,53 +264,17 @@ export const Dashboard = () => {
             
           </div>
 
-          {/* Daily Missions */}
+          {/* Habit Attendance Sheet */}
           <div className="glass-panel p-5 rounded-xl border-white/10 relative">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="font-futuristic font-bold text-sm text-white flex items-center gap-1.5 uppercase tracking-wider">
-                  Today's Active Missions <Sparkles size={14} className="text-accent" />
+                  Habit Attendance Sheet <Sparkles size={14} className="text-accent animate-pulse" />
                 </h3>
-                <p className="text-[10px] text-slate-400 font-display uppercase tracking-widest mt-0.5">COMPLETE FOR FAST XP LOOT</p>
+                <p className="text-[10px] text-slate-400 font-display uppercase tracking-widest mt-0.5">TRACK MONTHLY ATTENDANCE MATRIX</p>
               </div>
-              <span className="text-xs font-bold text-accent font-futuristic bg-accent/10 border border-accent/20 px-2.5 py-1 rounded">
-                {progressPercent}% Complete
-              </span>
             </div>
-
-            <div className="space-y-2.5">
-              {dailyMissions.map((mission) => (
-                <div 
-                  key={mission.id} 
-                  className={`flex items-center justify-between p-3.5 rounded-lg border transition-all duration-200 ${
-                    mission.completed 
-                      ? 'bg-slate-950/20 border-emerald-500/20 opacity-60' 
-                      : 'bg-slate-950/50 border-white/5 hover:border-white/10'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => !mission.completed && completeMission(mission.id)}
-                      className={`w-5 h-5 rounded border flex items-center justify-center cursor-pointer transition-all duration-200 ${
-                        mission.completed 
-                          ? 'bg-emerald-500 border-emerald-500 text-slate-950' 
-                          : 'border-white/20 hover:border-accent bg-transparent'
-                      }`}
-                      disabled={mission.completed}
-                    >
-                      {mission.completed && '✓'}
-                    </button>
-                    <span className={`text-xs font-medium ${mission.completed ? 'line-through text-slate-500' : 'text-slate-200'}`}>
-                      {mission.task}
-                    </span>
-                  </div>
-                  
-                  <span className="text-[9px] font-bold font-futuristic text-accent bg-cyan-500/10 border border-cyan-400/20 px-2 py-0.5 rounded uppercase tracking-wider">
-                    XP Boost
-                  </span>
-                </div>
-              ))}
-            </div>
+            <AttendanceTracker />
           </div>
 
           {/* Quick Navigation cards */}
