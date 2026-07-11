@@ -353,7 +353,7 @@ export const AttendanceTracker = () => {
       </div>
 
       {/* Stats Summary Panel */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="glass-panel p-4 rounded-xl border-white/10 flex items-center gap-4 bg-slate-900/40">
           <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-400/20 text-orange-400">
             <Flame size={20} className="animate-pulse" />
@@ -381,16 +381,6 @@ export const AttendanceTracker = () => {
           <div>
             <p className="text-[9px] text-slate-500 uppercase tracking-widest font-futuristic">Monthly Target Rate</p>
             <p className="text-lg font-futuristic font-black text-slate-200 mt-1">{stats.monthlyCompletionRate}%</p>
-          </div>
-        </div>
-
-        <div className="glass-panel p-4 rounded-xl border-white/10 flex items-center gap-4 bg-slate-900/40">
-          <div className="p-3 rounded-lg bg-indigo-500/10 border border-primary/20 text-primary">
-            <Calendar size={20} />
-          </div>
-          <div>
-            <p className="text-[9px] text-slate-500 uppercase tracking-widest font-futuristic">Yearly Consistency</p>
-            <p className="text-lg font-futuristic font-black text-slate-200 mt-1">{stats.yearlyCompletionRate}%</p>
           </div>
         </div>
       </div>
@@ -556,16 +546,7 @@ export const AttendanceTracker = () => {
         </div>
       </div>
 
-      {/* Yearly heat-map section */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-accent">
-          <Activity size={15} />
-          <h3 className="text-xs font-futuristic font-bold text-white uppercase tracking-wider">
-            Yearly Consistent Heatmap
-          </h3>
-        </div>
-        {renderHeatmap()}
-      </div>
+
 
       {/* ADD HABIT MODAL */}
       {showAddModal && (
