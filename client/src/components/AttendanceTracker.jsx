@@ -59,6 +59,13 @@ export const AttendanceTracker = () => {
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const dayNumbers = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
+  const todayDate = new Date();
+  const isToday = (dayNum) => {
+    return todayDate.getFullYear() === currentYear &&
+           todayDate.getMonth() === currentMonth &&
+           todayDate.getDate() === dayNum;
+  };
+
   // Month navigation
   const prevMonth = () => {
     setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
@@ -406,15 +413,24 @@ export const AttendanceTracker = () => {
                   const dayName = dateObj.toLocaleDateString([], { weekday: 'short' });
                   const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
 
+                  const isDayToday = isToday(d);
+
                   return (
                     <th 
                       key={d} 
-                      className={`p-2.5 text-center text-[8px] font-bold border-r border-white/5 min-w-[34px] ${
-                        isWeekend ? 'bg-slate-900/30 text-rose-400/70' : 'text-slate-400'
+                      className={`p-2.5 text-center text-[8px] font-bold border-r border-white/5 min-w-[34px] transition-all relative ${
+                        isDayToday 
+                          ? 'bg-cyan-500/20 text-cyan-300 font-extrabold border-x border-cyan-500/30' 
+                          : isWeekend 
+                            ? 'bg-slate-900/30 text-rose-400/70' 
+                            : 'text-slate-400'
                       }`}
                     >
                       <div className="font-display uppercase tracking-widest text-[7px] opacity-60">{dayName}</div>
                       <div className="mt-1 font-mono text-[9px]">{d}</div>
+                      {isDayToday && (
+                        <div className="absolute top-0 inset-x-0 h-[2px] bg-cyan-400" />
+                      )}
                     </th>
                   );
                 })}
@@ -493,19 +509,26 @@ export const AttendanceTracker = () => {
                       {dayNumbers.map(d => {
                         const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                         const isCompleted = habits[dateStr]?.[habitName] === true;
+                        const isDayToday = isToday(d);
                         
                         return (
                           <td 
                             key={d} 
                             onClick={() => toggleHabit(dateStr, habitName)}
-                            className="p-1 text-center border-r border-white/5 cursor-pointer select-none transition-colors hover:bg-white/[0.03]"
+                            className={`p-1 text-center border-r border-white/5 cursor-pointer select-none transition-colors ${
+                              isDayToday 
+                                ? 'bg-cyan-500/[0.04] border-x border-cyan-500/10' 
+                                : 'hover:bg-white/[0.03]'
+                            }`}
                           >
                             <div className="flex items-center justify-center w-full h-full">
                               <span 
                                 className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold transition-all ${
                                   isCompleted 
                                     ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shadow-glow-success scale-105' 
-                                    : 'text-slate-600 hover:text-slate-400 border border-transparent'
+                                    : isDayToday
+                                      ? 'text-cyan-400/40 hover:text-cyan-300 border border-cyan-500/25 bg-cyan-500/5'
+                                      : 'text-slate-600 hover:text-slate-400 border border-transparent'
                                 }`}
                               >
                                 {isCompleted ? '✓' : '○'}
