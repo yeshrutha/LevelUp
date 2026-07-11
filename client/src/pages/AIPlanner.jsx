@@ -21,6 +21,7 @@ export default function AIPlanner() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
 
   const loadingMessages = [
     "Analyzing goals and routine boundaries...",
@@ -53,7 +54,9 @@ export default function AIPlanner() {
 
     setLoading(true);
     setResult(null);
+    setError(null);
 
+    let rawText = '';
     try {
       console.log(`[AI PLANNER CLIENT] Sending generation request for prompt: "${prompt}"`);
       const response = await fetch(`${API_BASE_URL}/api/ai/planner`, {
@@ -62,12 +65,28 @@ export default function AIPlanner() {
         body: JSON.stringify({ prompt })
       });
 
+      rawText = await response.text();
+
       if (!response.ok) {
-        throw new Error('Planner API returned an error');
+        let errDetails = 'Planner server returned an error';
+        try {
+          const parsedErrObj = JSON.parse(rawText);
+          if (parsedErrObj.error) errDetails = parsedErrObj.error;
+        } catch (_) {}
+        const networkErr = new Error(errDetails);
+        networkErr.rawResponse = rawText;
+        throw networkErr;
       }
 
-      const data = await response.json();
-      console.log(`[AI PLANNER CLIENT] Received response payload:`, data);
+      console.log(`[AI PLANNER CLIENT] Received raw response payload:`, rawText);
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseErr) {
+        const customErr = new Error(`JSON parsing failed: ${parseErr.message}`);
+        customErr.rawResponse = rawText;
+        throw customErr;
+      }
 
       // Overwrite current environment state to strictly match AI response contents
       let finalHabits = [];
@@ -111,7 +130,11 @@ export default function AIPlanner() {
       triggerToast('Environment Deployed', 'Your personalized routine has been instantiated!', 'success');
     } catch (err) {
       console.error(err);
-      triggerToast('Generation Failed', 'Could not parse configuration setup. Reverting to fallbacks.', 'error');
+      setError({
+        message: err.message || 'Unknown parsing exception.',
+        rawResponse: err.rawResponse || rawText || 'No raw response content received.'
+      });
+      triggerToast('Generation Failed', 'Could not instantiate configuration setup.', 'error');
     } finally {
       setLoading(false);
     }
@@ -138,8 +161,42 @@ export default function AIPlanner() {
         </div>
       </div>
 
+      {/* Error state display */}
+      {!loading && error && (
+        <div className="glass-panel p-6 rounded-xl border-rose-500/20 bg-rose-500/[0.02] space-y-4">
+          <div className="flex items-center gap-2 text-rose-400">
+            <AlertCircle size={18} className="shrink-0" />
+            <h3 className="text-xs font-futuristic font-bold uppercase tracking-wider">
+              Planner Execution Failed
+            </h3>
+          </div>
+          <p className="text-xs text-slate-350 leading-relaxed font-mono bg-slate-950/60 p-3 rounded border border-white/5">
+            Error: {error.message}
+          </p>
+          <div className="space-y-1.5 text-left">
+            <label className="block text-[8px] uppercase font-futuristic text-slate-500 font-bold tracking-widest">
+              Raw AI Agent Output
+            </label>
+            <pre className="w-full bg-slate-950/80 border border-white/5 rounded p-4 text-[10px] font-mono text-slate-400 overflow-x-auto max-h-48 whitespace-pre-wrap select-text">
+              {error.rawResponse}
+            </pre>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setError(null);
+                setPrompt('');
+              }}
+              className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-850 border border-white/5 text-slate-400 font-futuristic font-bold text-xs uppercase rounded cursor-pointer transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
-      {!loading && !result && (
+      {!loading && !result && !error && (
         <div className="glass-panel p-6 rounded-xl border-white/10 space-y-4">
           <div className="space-y-2">
             <label className="text-[10px] font-futuristic font-bold text-slate-400 tracking-widest uppercase block">

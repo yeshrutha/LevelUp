@@ -31,6 +31,33 @@ app.use(express.json());
 // In-memory fallback database for multi-user isolation
 let localDB = {};
 
+const tolerantJsonParse = (str) => {
+  if (!str) return null;
+  let cleaned = str.trim();
+  
+  // Extract JSON object by finding the first '{' and the last '}'
+  const firstCurly = cleaned.indexOf('{');
+  const lastCurly = cleaned.lastIndexOf('}');
+  if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
+    cleaned = cleaned.substring(firstCurly, lastCurly + 1);
+  }
+  
+  // Remove trailing commas before braces or brackets
+  cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
+  
+  // Convert single quotes around keys: 'key': -> "key":
+  cleaned = cleaned.replace(/'([^']*)'\s*:/g, '"$1":');
+  // Convert single quoted string values: : 'value' -> : "value"
+  cleaned = cleaned.replace(/:\s*'([^']*)'/g, ': "$1"');
+  // Convert single quotes inside lists or arrays
+  cleaned = cleaned.replace(/\[\s*'([^']*)'/g, '["$1"');
+  cleaned = cleaned.replace(/,\s*'([^']*)'/g, ', "$1"');
+  cleaned = cleaned.replace(/'([^']*)'\s*,/g, '"$1",');
+  cleaned = cleaned.replace(/'([^']*)'\s*\]/g, '"$1"]');
+
+  return JSON.parse(cleaned);
+};
+
 const createUserProfile = (email, name = '') => ({
   displayName: name || email.split('@')[0],
   email,
@@ -348,7 +375,8 @@ app.get('/api/habits/list', async (req, res) => {
 // POST Habits List Sync
 app.post('/api/habits/list', async (req, res) => {
   try {
-    console.log(`[MONGODB TRACE] Received habit checklist list to save for ${req.user.email}:`, req.body.habitList);
+    console.log("=== MONGODB WRITE ===");
+    console.log(`Received habit checklist list to save for ${req.user.email}:`, req.body.habitList);
     if (isConnectedToMongo) {
       const result = await UserData.updateOne(
         { email: req.user.email },
@@ -1025,10 +1053,24 @@ app.post('/api/ai/planner', async (req, res) => {
   try {
     if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
       let responseText = await callGemini(systemInstruction, `Generate habits and calendar events for the prompt: "${prompt}"`, true);
-      console.log(`[AI PLANNER TRACE] Raw AI response text before parsing:`, responseText);
-      responseText = responseText.replace(/```json/i, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(responseText);
-      console.log(`[AI PLANNER TRACE] Successfully parsed JSON:`, parsed);
+      
+      console.log("=== RAW NVIDIA RESPONSE ===");
+      console.log(responseText);
+
+      let parsed = null;
+      try {
+        parsed = tolerantJsonParse(responseText);
+        console.log("=== PARSED JSON ===");
+        console.log(JSON.stringify(parsed, null, 2));
+      } catch (parseErr) {
+        console.error("=== PARSER EXCEPTION ===");
+        console.error("Parser Exception message:", parseErr.message);
+        console.error("Parsing failed at line stack:", parseErr.stack);
+        throw parseErr;
+      }
+
+      console.log("=== FINAL HABITS ===");
+      console.log(JSON.stringify(parsed ? (parsed.habits || []) : [], null, 2));
       
       aiPlannerTraceLogs.push({
         time: new Date().toISOString(),
