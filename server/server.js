@@ -312,15 +312,18 @@ app.get('/api/habits', async (req, res) => {
 // POST Habits Log Sync
 app.post('/api/habits', async (req, res) => {
   try {
+    console.log(`[MONGODB TRACE] Received habit logs to save for ${req.user.email}:`, req.body.habits);
     if (isConnectedToMongo) {
-      await UserData.updateOne(
+      const result = await UserData.updateOne(
         { email: req.user.email },
         { $set: { habits: req.body.habits, updatedAt: new Date() } },
         { upsert: true }
       );
+      console.log(`[MONGODB TRACE] Successfully updated MongoDB habits for ${req.user.email}:`, result);
       return res.json({ success: true });
     } else {
       getOrInitUser(req.user.email).habits = req.body.habits;
+      console.log(`[MONGODB TRACE] Saved habit logs in-memory fallback for ${req.user.email}`);
       return res.json({ success: true });
     }
   } catch (err) {
@@ -345,15 +348,18 @@ app.get('/api/habits/list', async (req, res) => {
 // POST Habits List Sync
 app.post('/api/habits/list', async (req, res) => {
   try {
+    console.log(`[MONGODB TRACE] Received habit checklist list to save for ${req.user.email}:`, req.body.habitList);
     if (isConnectedToMongo) {
-      await UserData.updateOne(
+      const result = await UserData.updateOne(
         { email: req.user.email },
         { $set: { habitList: req.body.habitList, updatedAt: new Date() } },
         { upsert: true }
       );
+      console.log(`[MONGODB TRACE] Successfully updated MongoDB habitList for ${req.user.email}:`, result);
       return res.json({ success: true });
     } else {
       getOrInitUser(req.user.email).habitList = req.body.habitList;
+      console.log(`[MONGODB TRACE] Saved habit checklist list in-memory fallback for ${req.user.email}`);
       return res.json({ success: true });
     }
   } catch (err) {

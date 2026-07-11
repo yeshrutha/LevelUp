@@ -52,6 +52,7 @@ export default function AIPlanner() {
     setResult(null);
 
     try {
+      console.log(`[AI PLANNER CLIENT] Sending generation request for prompt: "${prompt}"`);
       const response = await fetch(`${API_BASE_URL}/api/ai/planner`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,14 +64,19 @@ export default function AIPlanner() {
       }
 
       const data = await response.json();
+      console.log(`[AI PLANNER CLIENT] Received response payload:`, data);
 
       // 1. Add Habits
       let habitsAdded = 0;
       if (Array.isArray(data.habits)) {
+        console.log(`[AI PLANNER CLIENT] Parsing ${data.habits.length} habits:`, data.habits);
         data.habits.forEach(h => {
+          console.log(`[AI PLANNER CLIENT] Adding habit item to checklist: "${h}"`);
           if (!habitList.includes(h)) {
             addHabit(h);
             habitsAdded++;
+          } else {
+            console.log(`[AI PLANNER CLIENT] Habit already exists, skipping: "${h}"`);
           }
         });
       }
