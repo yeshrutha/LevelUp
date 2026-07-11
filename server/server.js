@@ -1331,6 +1331,8 @@ app.get('/api/system/diagnostics', async (req, res) => {
       sentRemindersCache,
       lastProfileSyncs,
       emailLogs,
+      smtpConfigured: !!(process.env.SMTP_EMAIL && (process.env.SMTP_PASSWORD || process.env.SMTP_PASS || process.env.SENDER_PASSWORD)),
+      smtpEmailValue: process.env.SMTP_EMAIL || process.env.SMTP_USER || process.env.SENDER_EMAIL || 'NOT_SET',
       websiteUrlConfig: process.env.WEBSITE_URL || 'NOT_SET',
       diagnostics
     });
