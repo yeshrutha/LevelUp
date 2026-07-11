@@ -4,7 +4,45 @@ export const emailLogs = [];
 
 let transporter = null;
 
-const getTransporter = async () => {
+export let smtpStartupError = null;
+export let smtpStartupStatus = 'pending';
+
+const verifySMTPOnStartup = async () => {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+  if (!user || !pass) {
+    smtpStartupStatus = 'missing_credentials';
+    console.warn('⚠️ Mailer: EMAIL_USER or EMAIL_PASS environment variables are missing.');
+    return;
+  }
+  
+  try {
+    smtpStartupStatus = 'verifying';
+    const testTransporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      requireTLS: true,
+      auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false
+      },
+      family: 4 // Force IPv4 to prevent ENETUNREACH/timeout errors on IPv6 networks
+    });
+    await testTransporter.verify();
+    smtpStartupStatus = 'success';
+    console.log('✉️ Mailer: SMTP connection verified successfully on startup.');
+  } catch (err) {
+    smtpStartupStatus = 'error';
+    smtpStartupError = err.message;
+    console.error('❌ Mailer: SMTP connection verification failed on startup:', err.message);
+  }
+};
+
+// Trigger SMTP verification asynchronously on startup
+verifySMTPOnStartup();
+
+const getTransporter = () => {
   if (transporter) return transporter;
 
   const user = process.env.EMAIL_USER;
@@ -21,13 +59,11 @@ const getTransporter = async () => {
     requireTLS: true,
     auth: { user, pass },
     tls: {
-      rejectUnauthorized: false // Bypass local TLS validation locks to prevent ENETUNREACH/timeout errors
-    }
+      rejectUnauthorized: false
+    },
+    family: 4 // Force IPv4
   });
 
-  // Verify connection configuration
-  await transporter.verify();
-  console.log('✉️ Mailer: SMTP connection verified successfully.');
   return transporter;
 };
 

@@ -9,7 +9,7 @@ import fs from 'fs';
 
 dotenv.config();
 
-import { EmailService, emailLogs } from './emailService.js';
+import { EmailService, emailLogs, smtpStartupStatus, smtpStartupError } from './emailService.js';
 
 import nodemailer from 'nodemailer';
 
@@ -1329,6 +1329,8 @@ app.get('/api/system/diagnostics', async (req, res) => {
       emailLogs,
       smtpConfigured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
       smtpEmailValue: process.env.EMAIL_USER || 'NOT_SET',
+      smtpStartupStatus,
+      smtpStartupError,
       websiteUrlConfig: process.env.WEBSITE_URL || 'NOT_SET',
       diagnostics
     });
