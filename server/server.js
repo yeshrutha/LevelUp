@@ -9,7 +9,7 @@ import fs from 'fs';
 
 dotenv.config();
 
-import { EmailService } from './emailService.js';
+import { EmailService, emailLogs } from './emailService.js';
 
 if (!process.env.RESEND_API_KEY) {
   throw new Error('RESEND_API_KEY is missing in environmental variables. Integration failed.');
@@ -1330,6 +1330,7 @@ app.get('/api/system/diagnostics', async (req, res) => {
       isConnectedToMongo,
       sentRemindersCache,
       lastProfileSyncs,
+      emailLogs,
       websiteUrlConfig: process.env.WEBSITE_URL || 'NOT_SET',
       diagnostics
     });

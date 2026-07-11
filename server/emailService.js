@@ -1,11 +1,41 @@
 import { Resend } from 'resend';
 
+export const emailLogs = [];
+
 const getResendInstance = () => {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     throw new Error('RESEND_API_KEY is missing in environmental variables. Integration failed.');
   }
-  return new Resend(apiKey);
+  const client = new Resend(apiKey);
+  return {
+    emails: {
+      send: async (options) => {
+        try {
+          const result = await client.emails.send(options);
+          emailLogs.push({
+            time: new Date().toISOString(),
+            to: options.to,
+            subject: options.subject,
+            status: 'success',
+            result
+          });
+          if (emailLogs.length > 50) emailLogs.shift();
+          return result;
+        } catch (err) {
+          emailLogs.push({
+            time: new Date().toISOString(),
+            to: options.to,
+            subject: options.subject,
+            status: 'error',
+            error: err.message
+          });
+          if (emailLogs.length > 50) emailLogs.shift();
+          throw err;
+        }
+      }
+    }
+  };
 };
 
 const getFromEmail = () => {
