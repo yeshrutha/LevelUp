@@ -1240,27 +1240,47 @@ export const AppProvider = ({ children }) => {
   };
 
   // Habit List Customizer Helper
-  const addHabit = (name, reminder = null) => {
+  const addHabit = (name, reminder = null, details = {}) => {
     if (!name || habitList.includes(name)) return;
     setHabitList(prev => [...prev, name]);
     
-    if (reminder) {
-      setUser(prev => {
-        const updatedUser = {
-          ...prev,
-          habitReminders: {
-            ...(prev?.habitReminders || {}),
-            [name]: { enabled: true, time: reminder }
-          }
-        };
-        if (prev?.email) {
-          const key = prev.email.toLowerCase();
-          localStorage.setItem(`levelup_user_${key}`, JSON.stringify(updatedUser));
-          localStorage.setItem('levelup_user', JSON.stringify(updatedUser));
+    const habitId = details.id || `habit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const newDetails = {
+      id: habitId,
+      title: name,
+      description: details.description || '',
+      time: reminder || '',
+      startTime: details.startTime || reminder || '',
+      endTime: details.endTime || '',
+      category: details.category || 'Routine',
+      priority: details.priority || 'Medium',
+      xpReward: details.xpReward || 10,
+      repeatFrequency: details.repeatFrequency || 'Daily',
+      color: details.color || '#06b6d4',
+      icon: details.icon || 'star',
+      reminderEnabled: reminder !== null
+    };
+
+    setUser(prev => {
+      const updatedUser = {
+        ...prev,
+        habitReminders: {
+          ...(prev?.habitReminders || {}),
+          [name]: { enabled: reminder !== null, time: reminder }
+        },
+        habitDetails: {
+          ...(prev?.habitDetails || {}),
+          [name]: newDetails
         }
-        return updatedUser;
-      });
-    }
+      };
+      if (prev?.email) {
+        const key = prev.email.toLowerCase();
+        localStorage.setItem(`levelup_user_${key}`, JSON.stringify(updatedUser));
+        localStorage.setItem('levelup_user', JSON.stringify(updatedUser));
+      }
+      return updatedUser;
+    });
 
     addXP(10, `Tracked custom habit: "${name}"`);
     triggerToast('Habit Tracked', `New habit added: "${name}"`, 'success');
@@ -1269,9 +1289,11 @@ export const AppProvider = ({ children }) => {
   const deleteHabit = (name) => {
     setHabitList(prev => prev.filter(h => h !== name));
     setUser(prev => {
-      const copy = { ...(prev?.habitReminders || {}) };
-      delete copy[name];
-      const updatedUser = { ...prev, habitReminders: copy };
+      const copyReminders = { ...(prev?.habitReminders || {}) };
+      delete copyReminders[name];
+      const copyDetails = { ...(prev?.habitDetails || {}) };
+      delete copyDetails[name];
+      const updatedUser = { ...prev, habitReminders: copyReminders, habitDetails: copyDetails };
       if (prev?.email) {
         const key = prev.email.toLowerCase();
         localStorage.setItem(`levelup_user_${key}`, JSON.stringify(updatedUser));
@@ -1279,6 +1301,109 @@ export const AppProvider = ({ children }) => {
       }
       return updatedUser;
     });
+  };
+
+  const editHabit = async (oldName, newName, updatedDetails) => {
+    if (!oldName || !newName) return;
+    
+    if (newName !== oldName && habitList.includes(newName)) {
+      triggerToast('Edit Failed', 'A habit with this name already exists.', 'error');
+      return;
+    }
+
+    const prevHabitList = [...habitList];
+    const prevHabits = { ...habits };
+    const prevUser = { ...user };
+
+    // Apply optimistic updates
+    const nextHabitList = habitList.map(h => h === oldName ? newName : h);
+    
+    const nextHabits = { ...habits };
+    for (const date in nextHabits) {
+      if (nextHabits[date] && nextHabits[date][oldName] !== undefined) {
+        nextHabits[date][newName] = nextHabits[date][oldName];
+        delete nextHabits[date][oldName];
+      }
+    }
+
+    const copyReminders = { ...(user?.habitReminders || {}) };
+    const copyDetails = { ...(user?.habitDetails || {}) };
+    
+    const existingId = copyDetails[oldName]?.id || `habit_${Date.now()}`;
+    const newHabitInfo = {
+      ...copyDetails[oldName],
+      ...updatedDetails,
+      id: existingId,
+      title: newName,
+      time: updatedDetails.time || '',
+      reminderEnabled: !!updatedDetails.reminderEnabled
+    };
+
+    if (newName !== oldName) {
+      copyReminders[newName] = {
+        enabled: !!updatedDetails.reminderEnabled,
+        time: updatedDetails.time || ''
+      };
+      delete copyReminders[oldName];
+      copyDetails[newName] = newHabitInfo;
+      delete copyDetails[oldName];
+    } else {
+      copyReminders[oldName] = {
+        enabled: !!updatedDetails.reminderEnabled,
+        time: updatedDetails.time || ''
+      };
+      copyDetails[oldName] = newHabitInfo;
+    }
+
+    const nextUser = {
+      ...user,
+      habitReminders: copyReminders,
+      habitDetails: copyDetails
+    };
+
+    // Update React states optimistically
+    setHabitList(nextHabitList);
+    setHabits(nextHabits);
+    setUser(nextUser);
+
+    if (user?.email) {
+      const key = user.email.toLowerCase();
+      localStorage.setItem(`levelup_habit_list_${key}`, JSON.stringify(nextHabitList));
+      localStorage.setItem(`levelup_habits_${key}`, JSON.stringify(nextHabits));
+      localStorage.setItem(`levelup_user_${key}`, JSON.stringify(nextUser));
+    }
+
+    try {
+      const listPromise = apiFetch('/api/habits/list', {
+        method: 'POST',
+        body: JSON.stringify({ habitList: nextHabitList })
+      });
+      const habitsPromise = apiFetch('/api/habits', {
+        method: 'POST',
+        body: JSON.stringify({ habits: nextHabits })
+      });
+      const userPromise = apiFetch('/api/profile/sync', {
+        method: 'POST',
+        body: JSON.stringify(nextUser)
+      });
+
+      await Promise.all([listPromise, habitsPromise, userPromise]);
+      triggerToast('Success', 'Habit updated successfully.', 'success');
+    } catch (err) {
+      console.error('Failed to sync edited habit to server:', err);
+      // Rollback
+      setHabitList(prevHabitList);
+      setHabits(prevHabits);
+      setUser(prevUser);
+
+      if (user?.email) {
+        const key = user.email.toLowerCase();
+        localStorage.setItem(`levelup_habit_list_${key}`, JSON.stringify(prevHabitList));
+        localStorage.setItem(`levelup_habits_${key}`, JSON.stringify(prevHabits));
+        localStorage.setItem(`levelup_user_${key}`, JSON.stringify(prevUser));
+      }
+      triggerToast('Error', 'Failed to update habit on server. Reverted changes.', 'error');
+    }
   };
 
   // Dashboard Target Goal Customizer Helper
@@ -1317,7 +1442,7 @@ export const AppProvider = ({ children }) => {
       currentTab, setCurrentTab,
       promotionEvent, setPromotionEvent,
       habits, toggleHabit,
-      habitList, addHabit, deleteHabit,
+      habitList, addHabit, deleteHabit, editHabit,
       dashboardGoal, updateDashboardGoal,
       calendar, addCalendarEvent, deleteCalendarEvent,
       dailyMissions, completeMission,
