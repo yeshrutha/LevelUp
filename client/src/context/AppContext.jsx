@@ -339,12 +339,12 @@ export const AppProvider = ({ children }) => {
 
   // Generic backend fetch helper client
   const apiFetch = async (path, options = {}) => {
-    if (!user || !user.email) return null;
-    const token = user.email.toLowerCase();
+    const tokenVal = token || localStorage.getItem('levelup_token') || sessionStorage.getItem('levelup_token') || (user && user.email?.toLowerCase());
+    if (!tokenVal) return null;
     
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Bearer ${tokenVal}`,
       ...(options.headers || {})
     };
     
@@ -733,6 +733,51 @@ export const AppProvider = ({ children }) => {
     setCurrentTab('login');
     triggerToast('System Reset Complete', 'All local storage and server database records purged.', 'success');
   };
+
+  // Fetch latest telemetry and sync states from backend on startup or token availability
+  useEffect(() => {
+    const fetchLatestTelemetry = async () => {
+      const tokenVal = token || localStorage.getItem('levelup_token') || sessionStorage.getItem('levelup_token');
+      if (!tokenVal) return;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/profile/full`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tokenVal}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Load backend data into React state
+          if (data.profile) {
+            setUser(prev => ({
+              ...prev,
+              ...data.profile,
+              timezone: data.profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'
+            }));
+            const isRemembered = localStorage.getItem('levelup_remember_me') === 'true';
+            const storage = isRemembered ? localStorage : sessionStorage;
+            storage.setItem('levelup_user', JSON.stringify(data.profile));
+          }
+          if (Array.isArray(data.habitList)) setHabitList(data.habitList);
+          if (data.habits) setHabits(data.habits);
+          if (Array.isArray(data.calendar)) setCalendar(data.calendar);
+          if (Array.isArray(data.customPages)) setCustomPages(data.customPages);
+          if (data.goal) setDashboardGoal(data.goal);
+          
+          if (data.profile?.themeMode) setThemeMode(data.profile.themeMode);
+          if (data.profile?.isMuted !== undefined) setIsMuted(data.profile.isMuted);
+
+          console.log('🤖 WebPush: Successfully loaded full backend telemetry data for sync.');
+        }
+      } catch (err) {
+        console.warn('Failed to auto-sync telemetry profile on start:', err);
+      }
+    };
+
+    fetchLatestTelemetry();
+  }, [token]);
 
   // --- AUTOMATED BACKEND SYNC TRIGGERS ---
 

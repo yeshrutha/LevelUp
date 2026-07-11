@@ -167,6 +167,26 @@ app.use(authMiddleware);
 
 // --- API ROUTES ---
 
+// GET Full User Profile & Telemetry Data
+app.get('/api/profile/full', async (req, res) => {
+  try {
+    let userVal = null;
+    if (isConnectedToMongo) {
+      userVal = await UserData.findOne({ email: req.user.email });
+    } else {
+      userVal = localDB[req.user.email.toLowerCase()];
+    }
+
+    if (!userVal) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json(buildUserPayload(userVal));
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // GET Profile
 app.get('/api/profile', async (req, res) => {
   try {
