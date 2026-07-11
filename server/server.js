@@ -1450,6 +1450,14 @@ const sendHabitReminders = async () => {
 // Check every 30 seconds
 setInterval(sendHabitReminders, 30000);
 
+// Self-ping to keep Render instance awake (runs every 10 minutes)
+const selfPing = () => {
+  fetch('https://levelup-1-7j6v.onrender.com/api/system/diagnostics')
+    .then(() => console.log('💓 Self-ping successful: keeping Render instance awake.'))
+    .catch((err) => console.warn('⚠️ Self-ping failed:', err.message));
+};
+setInterval(selfPing, 600000);
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
