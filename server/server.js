@@ -732,8 +732,7 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
         messages: [
           { role: 'system', content: systemInstruction },
           { role: 'user', content: userPrompt }
-        ],
-        response_format: jsonMode ? { type: 'json_object' } : undefined
+        ]
       })
     });
 
@@ -893,7 +892,8 @@ app.post('/api/ai/notion', async (req, res) => {
 
   try {
     if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
-      const responseText = await callGemini(systemInstruction, `Generate progressive tasks for ${daysCount} days matching the prompt: "${prompt}"`, true);
+      let responseText = await callGemini(systemInstruction, `Generate progressive tasks for ${daysCount} days matching the prompt: "${prompt}"`, true);
+      responseText = responseText.replace(/```json/i, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(responseText);
       if (parsed && Array.isArray(parsed.tasks)) {
         return res.json({ tasks: parsed.tasks });
@@ -982,7 +982,8 @@ app.post('/api/ai/planner', async (req, res) => {
 
   try {
     if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
-      const responseText = await callGemini(systemInstruction, `Generate habits and calendar events for the prompt: "${prompt}"`, true);
+      let responseText = await callGemini(systemInstruction, `Generate habits and calendar events for the prompt: "${prompt}"`, true);
+      responseText = responseText.replace(/```json/i, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(responseText);
       if (parsed) {
         return res.json(parsed);
