@@ -521,6 +521,12 @@ export const AppProvider = ({ children }) => {
       const vapidRes = await fetch(`${API_BASE_URL}/api/system/vapid-key`);
       const { publicKey } = await vapidRes.json();
 
+      // Clear any stale subscription first to prevent ApplicationServerKey conflict
+      const existingSub = await reg.pushManager.getSubscription();
+      if (existingSub) {
+        await existingSub.unsubscribe();
+      }
+
       const subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey)
