@@ -1330,6 +1330,7 @@ app.get('/api/system/diagnostics', async (req, res) => {
       isConnectedToMongo,
       sentRemindersCache,
       lastProfileSyncs,
+      websiteUrlConfig: process.env.WEBSITE_URL || 'NOT_SET',
       diagnostics
     });
   } catch (err) {
