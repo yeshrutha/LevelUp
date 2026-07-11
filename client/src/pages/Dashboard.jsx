@@ -264,18 +264,7 @@ export const Dashboard = () => {
             
           </div>
 
-          {/* Habit Attendance Sheet */}
-          <div className="glass-panel p-5 rounded-xl border-white/10 relative">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="font-futuristic font-bold text-sm text-white flex items-center gap-1.5 uppercase tracking-wider">
-                  Habit Attendance Sheet <Sparkles size={14} className="text-accent animate-pulse" />
-                </h3>
-                <p className="text-[10px] text-slate-400 font-display uppercase tracking-widest mt-0.5">TRACK MONTHLY ATTENDANCE MATRIX</p>
-              </div>
-            </div>
-            <AttendanceTracker />
-          </div>
+
 
           {/* Quick Navigation cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
