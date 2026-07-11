@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 
 const AppContext = createContext();
 
@@ -89,6 +89,10 @@ const decodeToken = (token) => {
 };
 
 export const AppProvider = ({ children }) => {
+  const lastServerUpdatedAt = useRef(null);
+  const lastLocalChangeTime = useRef(0);
+  const isSyncingFromServer = useRef(false);
+
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('levelup_user') || sessionStorage.getItem('levelup_user');
     let parsed = saved ? JSON.parse(saved) : null;
@@ -736,9 +740,16 @@ export const AppProvider = ({ children }) => {
 
   // Fetch latest telemetry and sync states from backend on startup or token availability
   useEffect(() => {
-    const fetchLatestTelemetry = async () => {
+    let intervalId = null;
+
+    const fetchLatestTelemetry = async (isStartup = false) => {
       const tokenVal = token || localStorage.getItem('levelup_token') || sessionStorage.getItem('levelup_token');
       if (!tokenVal) return;
+
+      // If user recently made changes locally, wait before overriding state
+      if (!isStartup && Date.now() - lastLocalChangeTime.current < 5000) {
+        return;
+      }
 
       try {
         const res = await fetch(`${API_BASE_URL}/api/profile/full`, {
@@ -749,39 +760,81 @@ export const AppProvider = ({ children }) => {
         });
         if (res.ok) {
           const data = await res.json();
+          
+          // Skip if server timestamp is identical to prevent render loops
+          if (!isStartup && data.updatedAt && data.updatedAt === lastServerUpdatedAt.current) {
+            return;
+          }
+          
+          if (data.updatedAt) {
+            lastServerUpdatedAt.current = data.updatedAt;
+          }
+
+          isSyncingFromServer.current = true;
+
           // Load backend data into React state
           if (data.profile) {
-            setUser(prev => ({
-              ...prev,
-              ...data.profile,
-              timezone: data.profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'
-            }));
+            setUser(prev => {
+              const hasDiff = !prev || 
+                prev.displayName !== data.profile.displayName || 
+                prev.xp !== data.profile.xp || 
+                prev.level !== data.profile.level ||
+                prev.themeMode !== data.profile.themeMode ||
+                prev.isMuted !== data.profile.isMuted;
+              return hasDiff ? { ...prev, ...data.profile } : prev;
+            });
             const isRemembered = localStorage.getItem('levelup_remember_me') === 'true';
             const storage = isRemembered ? localStorage : sessionStorage;
             storage.setItem('levelup_user', JSON.stringify(data.profile));
           }
-          if (Array.isArray(data.habitList)) setHabitList(data.habitList);
-          if (data.habits) setHabits(data.habits);
-          if (Array.isArray(data.calendar)) setCalendar(data.calendar);
-          if (Array.isArray(data.customPages)) setCustomPages(data.customPages);
-          if (data.goal) setDashboardGoal(data.goal);
+
+          if (Array.isArray(data.habitList)) {
+            setHabitList(prev => JSON.stringify(prev) !== JSON.stringify(data.habitList) ? data.habitList : prev);
+          }
+          if (data.habits) {
+            setHabits(prev => JSON.stringify(prev) !== JSON.stringify(data.habits) ? data.habits : prev);
+          }
+          if (Array.isArray(data.calendar)) {
+            setCalendar(prev => JSON.stringify(prev) !== JSON.stringify(data.calendar) ? data.calendar : prev);
+          }
+          if (Array.isArray(data.customPages)) {
+            setCustomPages(prev => JSON.stringify(prev) !== JSON.stringify(data.customPages) ? data.customPages : prev);
+          }
+          if (data.goal) {
+            setDashboardGoal(prev => JSON.stringify(prev) !== JSON.stringify(data.goal) ? data.goal : prev);
+          }
           
           if (data.profile?.themeMode) setThemeMode(data.profile.themeMode);
           if (data.profile?.isMuted !== undefined) setIsMuted(data.profile.isMuted);
 
-          console.log('🤖 WebPush: Successfully loaded full backend telemetry data for sync.');
+          console.log('🤖 WebPush: Telemetry synchronized successfully with MongoDB.');
+          isSyncingFromServer.current = false;
         }
       } catch (err) {
-        console.warn('Failed to auto-sync telemetry profile on start:', err);
+        console.warn('Failed to auto-sync telemetry profile:', err);
+        isSyncingFromServer.current = false;
       }
     };
 
-    fetchLatestTelemetry();
+    // Run immediately on mount/startup
+    fetchLatestTelemetry(true);
+
+    // Setup periodic polling interval (every 8 seconds) if tab is active
+    intervalId = setInterval(() => {
+      if (document.hidden) return;
+      fetchLatestTelemetry(false);
+    }, 8000);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [token]);
 
   // --- AUTOMATED BACKEND SYNC TRIGGERS ---
 
   useEffect(() => {
+    if (isSyncingFromServer.current) return;
+    lastLocalChangeTime.current = Date.now();
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_user_${key}`, JSON.stringify(user));
@@ -794,6 +847,8 @@ export const AppProvider = ({ children }) => {
   }, [user]);
 
   useEffect(() => {
+    if (isSyncingFromServer.current) return;
+    lastLocalChangeTime.current = Date.now();
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_habit_list_${key}`, JSON.stringify(habitList));
@@ -807,6 +862,8 @@ export const AppProvider = ({ children }) => {
   }, [habitList, user]);
 
   useEffect(() => {
+    if (isSyncingFromServer.current) return;
+    lastLocalChangeTime.current = Date.now();
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_habits_${key}`, JSON.stringify(habits));
@@ -820,6 +877,8 @@ export const AppProvider = ({ children }) => {
   }, [habits, user]);
 
   useEffect(() => {
+    if (isSyncingFromServer.current) return;
+    lastLocalChangeTime.current = Date.now();
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_calendar_${key}`, JSON.stringify(calendar));
@@ -832,6 +891,8 @@ export const AppProvider = ({ children }) => {
   }, [calendar, user]);
 
   useEffect(() => {
+    if (isSyncingFromServer.current) return;
+    lastLocalChangeTime.current = Date.now();
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_dashboard_goal_${key}`, JSON.stringify(dashboardGoal));
@@ -844,6 +905,8 @@ export const AppProvider = ({ children }) => {
   }, [dashboardGoal, user]);
 
   useEffect(() => {
+    if (isSyncingFromServer.current) return;
+    lastLocalChangeTime.current = Date.now();
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_custom_pages_${key}`, JSON.stringify(customPages));
@@ -857,6 +920,8 @@ export const AppProvider = ({ children }) => {
   }, [customPages, user]);
 
   useEffect(() => {
+    if (isSyncingFromServer.current) return;
+    lastLocalChangeTime.current = Date.now();
     if (user && user.email) {
       const key = user.email.toLowerCase();
       localStorage.setItem(`levelup_notifications_${key}`, JSON.stringify(notifications));

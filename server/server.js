@@ -130,7 +130,8 @@ const buildUserPayload = (userData) => ({
   habitList: userData.habitList,
   customPages: userData.customPages,
   calendar: userData.calendar,
-  goal: userData.goal
+  goal: userData.goal,
+  updatedAt: userData.updatedAt
 });
 
 const authMiddleware = async (req, res, next) => {
