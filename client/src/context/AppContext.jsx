@@ -993,8 +993,8 @@ export const AppProvider = ({ children }) => {
   // Main XP synchronization engine
   const addXP = (amount, actionName) => {
     if (!user) return;
-    
-    const prevXP = user.xp;
+
+    const prevXP = user.xp || 0;
     const nextXP = prevXP + amount;
     
     // Calculate rank and level based on 333 XP per rank tier (1000 XP per level)
@@ -1003,13 +1003,13 @@ export const AppProvider = ({ children }) => {
     const newLevel = Math.floor(nextXP / 1000) + 1; // Level goes up every 3 ranks (1000 XP)
 
     const profileChanged = newRank !== user.rank;
-    
-    setUser({
-      ...user,
+
+    setUser(prev => ({
+      ...prev,
       xp: nextXP,
       rank: newRank,
       level: newLevel
-    });
+    }));
 
     if (profileChanged) {
       setPromotionEvent({
@@ -1018,7 +1018,7 @@ export const AppProvider = ({ children }) => {
         xpGained: amount,
         action: actionName
       });
-      // Add to notifications log
+      
       const rankNotif = {
         id: `rank_${Math.random()}`,
         title: 'Rank Ascent!',
