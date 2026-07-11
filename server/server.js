@@ -728,7 +728,7 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
         'Authorization': `Bearer ${nvidiaKey}`
       },
       body: JSON.stringify({
-        model: 'meta/llama-3.1-70b-instruct',
+        model: 'nvidia/llama-3.1-nemotron-70b-instruct',
         messages: [
           { role: 'system', content: systemInstruction },
           { role: 'user', content: userPrompt }
@@ -833,7 +833,7 @@ app.post('/api/ai/coach', async (req, res) => {
   `;
 
   try {
-    if (process.env.GEMINI_API_KEY) {
+    if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
       const reply = await callGemini(systemInstruction, message || 'Hello');
       return res.json({ reply: reply.trim() });
     }
@@ -892,7 +892,7 @@ app.post('/api/ai/notion', async (req, res) => {
   `;
 
   try {
-    if (process.env.GEMINI_API_KEY) {
+    if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
       const responseText = await callGemini(systemInstruction, `Generate progressive tasks for ${daysCount} days matching the prompt: "${prompt}"`, true);
       const parsed = JSON.parse(responseText);
       if (parsed && Array.isArray(parsed.tasks)) {
@@ -981,7 +981,7 @@ app.post('/api/ai/planner', async (req, res) => {
   `;
 
   try {
-    if (process.env.GEMINI_API_KEY) {
+    if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
       const responseText = await callGemini(systemInstruction, `Generate habits and calendar events for the prompt: "${prompt}"`, true);
       const parsed = JSON.parse(responseText);
       if (parsed) {
@@ -1115,6 +1115,7 @@ app.get('/api/system/diagnostics', async (req, res) => {
       serverTime: now.toISOString(),
       isConnectedToMongo,
       hasGeminiKey: !!process.env.GEMINI_API_KEY,
+      hasNvidiaKey: !!process.env.NVIDIA_API_KEY,
       sentRemindersCache,
       lastProfileSyncs,
       pushLogs,
