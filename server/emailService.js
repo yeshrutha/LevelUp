@@ -13,13 +13,23 @@ const getResendInstance = () => {
       send: async (options) => {
         try {
           const result = await client.emails.send(options);
-          emailLogs.push({
-            time: new Date().toISOString(),
-            to: options.to,
-            subject: options.subject,
-            status: 'success',
-            result
-          });
+          if (result.error) {
+            emailLogs.push({
+              time: new Date().toISOString(),
+              to: options.to,
+              subject: options.subject,
+              status: 'error',
+              error: result.error.message
+            });
+          } else {
+            emailLogs.push({
+              time: new Date().toISOString(),
+              to: options.to,
+              subject: options.subject,
+              status: 'success',
+              result
+            });
+          }
           if (emailLogs.length > 50) emailLogs.shift();
           return result;
         } catch (err) {
