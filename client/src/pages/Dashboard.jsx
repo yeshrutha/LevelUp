@@ -377,17 +377,17 @@ export const Dashboard = () => {
                 <Flame size={14} className="text-orange-400 animate-pulse" /> Habit Consistency Stats
               </h3>
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Streak</span>
-                  <span className="text-sm font-futuristic font-black text-slate-200 mt-1">{stats.currentStreak}d</span>
+                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Streak</span>
+                  <span className="text-xl md:text-2xl font-futuristic font-black text-slate-200 mt-1">{stats.currentStreak}d</span>
                 </div>
-                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Max Streak</span>
-                  <span className="text-sm font-futuristic font-black text-slate-200 mt-1">{stats.longestStreak}d</span>
+                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Max Streak</span>
+                  <span className="text-xl md:text-2xl font-futuristic font-black text-slate-200 mt-1">{stats.longestStreak}d</span>
                 </div>
-                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Month Rate</span>
-                  <span className="text-sm font-futuristic font-black text-cyan-400 mt-1">{stats.monthlyCompletionRate}%</span>
+                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Month Rate</span>
+                  <span className="text-xl md:text-2xl font-futuristic font-black text-cyan-400 mt-1">{stats.monthlyCompletionRate}%</span>
                 </div>
               </div>
             </div>
@@ -398,17 +398,17 @@ export const Dashboard = () => {
                 <Activity size={14} className="text-cyan-400" /> Focus Analytics Stats
               </h3>
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Week Focus</span>
-                  <span className="text-sm font-futuristic font-black text-slate-200 mt-1">{stats.weeklyFocusHours}h</span>
+                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Week Focus</span>
+                  <span className="text-xl md:text-2xl font-futuristic font-black text-slate-200 mt-1">{stats.weeklyFocusHours}h</span>
                 </div>
-                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Today Pct</span>
-                  <span className="text-sm font-futuristic font-black text-slate-200 mt-1">{stats.todayCompletionRate}%</span>
+                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Today Pct</span>
+                  <span className="text-xl md:text-2xl font-futuristic font-black text-slate-200 mt-1">{stats.todayCompletionRate}%</span>
                 </div>
-                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Workspaces</span>
-                  <span className="text-sm font-futuristic font-black text-primary mt-1">{customPages.length}</span>
+                <div className="bg-slate-950/65 border border-white/5 p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Workspaces</span>
+                  <span className="text-xl md:text-2xl font-futuristic font-black text-primary mt-1">{customPages.length}</span>
                 </div>
               </div>
             </div>
