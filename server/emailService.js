@@ -4,7 +4,7 @@ export const emailLogs = [];
 
 let transporter = null;
 
-const getTransporter = () => {
+const getTransporter = async () => {
   if (transporter) return transporter;
 
   const user = process.env.EMAIL_USER;
@@ -15,17 +15,26 @@ const getTransporter = () => {
   }
 
   transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass }
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    auth: { user, pass },
+    tls: {
+      rejectUnauthorized: false // Bypass local TLS validation locks to prevent ENETUNREACH/timeout errors
+    }
   });
 
+  // Verify connection configuration
+  await transporter.verify();
+  console.log('✉️ Mailer: SMTP connection verified successfully.');
   return transporter;
 };
 
 const sendEmail = async ({ to, subject, html }) => {
   const from = process.env.EMAIL_USER;
   try {
-    const client = getTransporter();
+    const client = await getTransporter();
     const result = await client.sendMail({
       from,
       to,
