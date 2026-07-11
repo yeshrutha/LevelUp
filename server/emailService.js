@@ -13,6 +13,9 @@ const getFromEmail = () => {
 };
 
 const getWebsiteUrl = () => {
+  if (process.env.RENDER === 'true') {
+    return 'https://levelup-assistant.vercel.app';
+  }
   return process.env.WEBSITE_URL || 'https://levelup-assistant.vercel.app';
 };
 
