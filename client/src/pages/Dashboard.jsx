@@ -12,7 +12,11 @@ import {
   Sparkles,
   Edit3,
   CalendarDays,
-  Bot
+  Bot,
+  Award,
+  Activity,
+  Hourglass,
+  BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AttendanceTracker } from '../components/AttendanceTracker';
@@ -26,7 +30,9 @@ export const Dashboard = () => {
     calendar,
     dashboardGoal,
     updateDashboardGoal,
-    customPages
+    customPages,
+    habits,
+    habitList
   } = useApp();
 
   const [greeting, setGreeting] = useState('Good Morning');
@@ -90,11 +96,109 @@ export const Dashboard = () => {
 
   const daysRemaining = calculateDaysRemaining(dashboardGoal.targetDate);
 
-  // Calculate mission completions
-  const completedMissions = dailyMissions.filter(m => m.completed).length;
-  const progressPercent = dailyMissions.length > 0 
-    ? Math.round((completedMissions / dailyMissions.length) * 100)
-    : 0;
+  // Calculate Habit Tracker & Analytics Telemetry Stats
+  const getDashboardStats = () => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
+    const activeHabits = habitList.filter(h => !(user?.habitDetails?.[h]?.archived));
+
+    // 1. Monthly Completion Rate
+    let totalCells = activeHabits.length * daysInMonth;
+    let completedCells = 0;
+    activeHabits.forEach(h => {
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        if (habits[dateStr]?.[h]) {
+          completedCells++;
+        }
+      }
+    });
+    const monthlyCompletionRate = totalCells > 0 ? Math.round((completedCells / totalCells) * 100) : 0;
+
+    // 2. Streaks calculation
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let tempStreak = 0;
+
+    let checkDate = new Date(currentYear, 11, 31);
+    if (checkDate > today) checkDate = today;
+
+    const dateKeys = [];
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(checkDate);
+      d.setDate(checkDate.getDate() - i);
+      dateKeys.push(d.toISOString().split('T')[0]);
+    }
+    dateKeys.reverse();
+
+    dateKeys.forEach(dateStr => {
+      const dayLogs = habits[dateStr] || {};
+      const hasAnyCompletion = Object.keys(dayLogs).some(h => activeHabits.includes(h) && dayLogs[h]);
+      if (hasAnyCompletion) {
+        tempStreak++;
+        if (tempStreak > longestStreak) longestStreak = tempStreak;
+      } else {
+        tempStreak = 0;
+      }
+    });
+
+    const todayStr = today.toISOString().split('T')[0];
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    const todayComplete = Object.keys(habits[todayStr] || {}).some(h => activeHabits.includes(h) && habits[todayStr][h]);
+    const yesterdayComplete = Object.keys(habits[yesterdayStr] || {}).some(h => activeHabits.includes(h) && habits[yesterdayStr][h]);
+
+    if (todayComplete || yesterdayComplete) {
+      let currentCheck = todayComplete ? today : yesterday;
+      let ok = true;
+      while (ok) {
+        const dateStr = currentCheck.toISOString().split('T')[0];
+        const dayLogs = habits[dateStr] || {};
+        const complete = Object.keys(dayLogs).some(h => activeHabits.includes(h) && dayLogs[h]);
+        if (complete) {
+          currentStreak++;
+          currentCheck.setDate(currentCheck.getDate() - 1);
+        } else {
+          ok = false;
+        }
+      }
+    }
+
+    // 3. Focus Hours (1.5 hours per completed habit this week)
+    const currentDay = today.getDay();
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + mondayOffset);
+    
+    let weeklyFocusCompleted = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayLogs = habits[dateStr] || {};
+      weeklyFocusCompleted += Object.keys(dayLogs).filter(name => activeHabits.includes(name) && dayLogs[name]).length;
+    }
+    const weeklyFocusHours = weeklyFocusCompleted * 1.5;
+
+    // 4. Today's checked percentage
+    const checkedTodayCount = Object.keys(habits[todayStr] || {}).filter(name => activeHabits.includes(name) && habits[todayStr][name]).length;
+    const todayCompletionRate = activeHabits.length > 0 ? Math.round((checkedTodayCount / activeHabits.length) * 100) : 0;
+
+    return {
+      currentStreak,
+      longestStreak,
+      monthlyCompletionRate,
+      weeklyFocusHours,
+      todayCompletionRate
+    };
+  };
+
+  const stats = getDashboardStats();
 
   const handleGoalSave = (e) => {
     e.preventDefault();
@@ -264,7 +368,52 @@ export const Dashboard = () => {
             
           </div>
 
+          {/* Telemetry Widgets: Streaks, Rate & Analytics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+            
+            {/* Habits Telemetry Card */}
+            <div className="glass-panel p-5 rounded-xl border-white/10 space-y-4 bg-slate-900/20">
+              <h3 className="text-xs font-futuristic font-bold text-white uppercase tracking-wider border-b border-white/5 pb-2 flex items-center gap-1.5">
+                <Flame size={14} className="text-orange-400 animate-pulse" /> Habit Consistency Stats
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Streak</span>
+                  <span className="text-sm font-futuristic font-black text-slate-200 mt-1">{stats.currentStreak}d</span>
+                </div>
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Max Streak</span>
+                  <span className="text-sm font-futuristic font-black text-slate-200 mt-1">{stats.longestStreak}d</span>
+                </div>
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Month Rate</span>
+                  <span className="text-sm font-futuristic font-black text-cyan-400 mt-1">{stats.monthlyCompletionRate}%</span>
+                </div>
+              </div>
+            </div>
 
+            {/* Analytics Telemetry Card */}
+            <div className="glass-panel p-5 rounded-xl border-white/10 space-y-4 bg-slate-900/20">
+              <h3 className="text-xs font-futuristic font-bold text-white uppercase tracking-wider border-b border-white/5 pb-2 flex items-center gap-1.5">
+                <Activity size={14} className="text-cyan-400" /> Focus Analytics Stats
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Week Focus</span>
+                  <span className="text-sm font-futuristic font-black text-slate-200 mt-1">{stats.weeklyFocusHours}h</span>
+                </div>
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Today Pct</span>
+                  <span className="text-sm font-futuristic font-black text-slate-200 mt-1">{stats.todayCompletionRate}%</span>
+                </div>
+                <div className="bg-slate-950/65 border border-white/5 p-3 rounded-lg flex flex-col items-center justify-center text-center">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Workspaces</span>
+                  <span className="text-sm font-futuristic font-black text-primary mt-1">{customPages.length}</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
 
           {/* Quick Navigation cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
