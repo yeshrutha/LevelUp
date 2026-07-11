@@ -721,6 +721,12 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
 
   if (nvidiaKey) {
     const url = 'https://integrate.api.nvidia.com/v1/chat/completions';
+    const targetModel = 'meta/llama-3.3-70b-instruct';
+    
+    console.log(`[AI TRACE] Initiating request to NVIDIA API using model: ${targetModel}`);
+    console.log(`[AI TRACE] Raw System Instruction:`, systemInstruction);
+    console.log(`[AI TRACE] Raw User Prompt:`, userPrompt);
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -728,7 +734,7 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
         'Authorization': `Bearer ${nvidiaKey}`
       },
       body: JSON.stringify({
-        model: 'nvidia/llama-3.1-nemotron-70b-instruct',
+        model: targetModel,
         messages: [
           { role: 'system', content: systemInstruction },
           { role: 'user', content: userPrompt }
@@ -738,11 +744,14 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
 
     if (!response.ok) {
       const errText = await response.text();
+      console.error(`[AI TRACE] NVIDIA API Error: Status ${response.status} - ${errText}`);
       throw new Error(`NVIDIA AI API Response: ${response.status} - ${errText}`);
     }
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content;
+    console.log(`[AI TRACE] Raw response received from NVIDIA:`, text);
+
     if (!text) {
       throw new Error('Empty response content received from NVIDIA AI.');
     }
@@ -987,8 +996,10 @@ app.post('/api/ai/planner', async (req, res) => {
   try {
     if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
       let responseText = await callGemini(systemInstruction, `Generate habits and calendar events for the prompt: "${prompt}"`, true);
+      console.log(`[AI PLANNER TRACE] Raw AI response text before parsing:`, responseText);
       responseText = responseText.replace(/```json/i, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(responseText);
+      console.log(`[AI PLANNER TRACE] Successfully parsed JSON:`, parsed);
       if (parsed) {
         return res.json(parsed);
       }
