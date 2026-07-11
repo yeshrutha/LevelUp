@@ -1114,6 +1114,7 @@ app.get('/api/system/diagnostics', async (req, res) => {
     return res.json({
       serverTime: now.toISOString(),
       isConnectedToMongo,
+      hasGeminiKey: !!process.env.GEMINI_API_KEY,
       sentRemindersCache,
       lastProfileSyncs,
       pushLogs,
