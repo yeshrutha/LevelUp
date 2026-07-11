@@ -1053,17 +1053,8 @@ app.post('/api/ai/planner', async (req, res) => {
     console.error('⚠️ Gemini Planner Error:', err.message);
   }
 
-  // Fallback config if Gemini fails or is not setup
-  return res.json({
-    habits: ["Wake Up: 6:15 AM", "Revision Study Session", "Exercise at Gym", "Drink 3L Water", "Solve 1 LeetCode", "Valorant (Max 2 Games)"],
-    calendarEvents: [
-      { title: "Placement Readiness Target", date: "2026-07-20", type: "Goal", time: "09:00 AM" },
-      { title: "Project MVP Presentation", date: "2026-07-25", type: "Review", time: "02:00 PM" }
-    ],
-    notifications: [
-      { title: "Planner Synchronized", body: "Your career goals schedule has been integrated successfully.", type: "system" }
-    ]
-  });
+  // Do not load any hardcoded routine config on failure; fallbacks are disabled.
+  return res.status(500).json({ error: 'AI Planner was unable to generate schedule at this time.' });
 });
 
 // GET VAPID Public Key
