@@ -1,8 +1,59 @@
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
 export const emailLogs = [];
 
 const getResendInstance = () => {
+  const smtpEmail = process.env.SMTP_EMAIL || process.env.SMTP_USER || process.env.SENDER_EMAIL;
+  const smtpPass = process.env.SMTP_PASSWORD || process.env.SMTP_PASS || process.env.SENDER_PASSWORD;
+
+  if (smtpEmail && smtpPass) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: smtpEmail,
+        pass: smtpPass
+      }
+    });
+
+    return {
+      emails: {
+        send: async (options) => {
+          try {
+            // Reformat from address for Gmail SMTP to match from email or display name
+            const fromField = smtpEmail;
+            const result = await transporter.sendMail({
+              from: fromField,
+              to: options.to,
+              subject: options.subject,
+              html: options.html
+            });
+            emailLogs.push({
+              time: new Date().toISOString(),
+              to: options.to,
+              subject: options.subject,
+              status: 'success',
+              result
+            });
+            if (emailLogs.length > 50) emailLogs.shift();
+            return { data: result, error: null };
+          } catch (err) {
+            emailLogs.push({
+              time: new Date().toISOString(),
+              to: options.to,
+              subject: options.subject,
+              status: 'error',
+              error: err.message
+            });
+            if (emailLogs.length > 50) emailLogs.shift();
+            return { data: null, error: { message: err.message } };
+          }
+        }
+      }
+    };
+  }
+
+  // Fallback to Resend
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     throw new Error('RESEND_API_KEY is missing in environmental variables. Integration failed.');
