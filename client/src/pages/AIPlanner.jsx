@@ -70,13 +70,11 @@ const MarkdownRenderer = ({ text, isUser }) => {
   lines.forEach((line, index) => {
     const trimmed = line.trim();
     
-    // 1. Table parsing
     if (trimmed.startsWith('|')) {
       flushList(`list_${index}`);
       inTable = true;
       const cells = line.split('|').map(c => c.trim()).filter((_, i, arr) => i > 0 && i < arr.length - 1);
       
-      // Skip separator lines like |---|---|
       if (cells.every(c => c.startsWith('-'))) {
         return;
       }
@@ -93,7 +91,6 @@ const MarkdownRenderer = ({ text, isUser }) => {
       }
     }
 
-    // 2. Heading parsing
     if (trimmed.startsWith('#')) {
       flushList(`list_${index}`);
       const level = trimmed.match(/^#+/)[0].length;
@@ -105,7 +102,6 @@ const MarkdownRenderer = ({ text, isUser }) => {
       return;
     }
 
-    // 3. Unordered list parsing
     if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
       inList = true;
       const content = trimmed.replace(/^[-*]\s*/, '');
@@ -117,13 +113,11 @@ const MarkdownRenderer = ({ text, isUser }) => {
       }
     }
 
-    // 4. Normal paragraph
     if (trimmed !== '') {
       renderedElements.push(<p key={index} className="text-slate-350 my-1.5 leading-relaxed text-[11px] select-text">{trimmed}</p>);
     }
   });
 
-  // Flush remaining structures
   flushList('final_list');
   flushTable('final_table');
 
@@ -163,9 +157,18 @@ export default function AIPlanner() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
+  useEffect(() => {
+    if (messages.length > 0) {
+      const latestMessage = messages[messages.length - 1];
+      console.log('[AI TRACE] Final rendered component', { component: 'AIPlanner', message: latestMessage, totalMessages: messages.length });
+    }
+  }, [messages]);
+
   const handleSend = async (textToSend) => {
     const msg = textToSend || input;
     if (!msg.trim()) return;
+
+    console.log('[AI TRACE][1] Prompt received from frontend', { component: 'AIPlanner', message: msg, userEmail: user?.email, displayName: user?.displayName, stats: { readiness: user?.readiness || 0, streak: user?.streak || 0 } });
 
     if (!textToSend) setInput('');
 
@@ -179,7 +182,10 @@ export default function AIPlanner() {
     setMessages(prev => [...prev, userMsg]);
     setIsTyping(true);
 
+    const tStart = Date.now();
     try {
+      console.log(`[PERF TRACE] 1. Frontend request sent at: ${new Date().toISOString()}`);
+      
       const response = await fetch(`${API_BASE_URL}/api/ai/coach`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -193,22 +199,37 @@ export default function AIPlanner() {
           }
         })
       });
+
+      console.log(`[PERF TRACE] 5. Frontend received initial response code ${response.status} at delta: ${Date.now() - tStart}ms`);
       
       if (!response.ok) {
         throw new Error('Coach API offline');
       }
       
       const data = await response.json();
-      
-      setMessages(prev => [...prev, {
+      console.log(`[PERF TRACE] 9. Frontend finished JSON parsing and formatting response at delta: ${Date.now() - tStart}ms`);
+      console.log('[AI TRACE][6] Frontend fetch result', { component: 'AIPlanner', status: response.status, data });
+
+      const aiResponse = typeof data?.aiResponse === 'string' && data.aiResponse.length > 0
+        ? data.aiResponse
+        : (typeof data?.reply === 'string' && data.reply.length > 0 ? data.reply : '');
+      console.log('[AI TRACE][7] Parsed response', { component: 'AIPlanner', aiResponse });
+
+      const aiMessage = {
         id: Math.random().toString(),
         sender: 'ai',
-        text: data.reply,
+        text: aiResponse,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }]);
+      };
+
+      console.log('[AI TRACE][7] React state before render', { component: 'AIPlanner', aiResponse, message: aiMessage });
+      setMessages(prev => {
+        const nextMessages = [...prev, aiMessage];
+        console.log('[AI TRACE][7] React state after render', { component: 'AIPlanner', nextMessages });
+        return nextMessages;
+      });
     } catch (e) {
-      console.error(e);
-      // Fallback simulated helper advice
+      console.error('[AI TRACE] Frontend fetch failure', { component: 'AIPlanner', error: e?.message || e });
       setTimeout(() => {
         let reply = "I am currently processing your request. Completing your workspace pages and daily checklist is the fastest way to master your habits.";
         const lowText = msg.toLowerCase();
@@ -221,12 +242,19 @@ export default function AIPlanner() {
           reply = "Procrastination happens when tasks feel overwhelming. Start with a single small target, like 'Drink Water' or 'Write 5 lines of code'. Just complete one daily cell!";
         }
 
-        setMessages(prev => [...prev, {
+        const aiMessage = {
           id: Math.random().toString(),
           sender: 'ai',
           text: reply,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }]);
+        };
+
+        console.log('[AI TRACE][7] React state before render', { component: 'AIPlanner', aiResponse: reply, message: aiMessage });
+        setMessages(prev => {
+          const nextMessages = [...prev, aiMessage];
+          console.log('[AI TRACE][7] React state after render', { component: 'AIPlanner', nextMessages });
+          return nextMessages;
+        });
       }, 600);
     } finally {
       setIsTyping(false);
@@ -320,6 +348,7 @@ export default function AIPlanner() {
       {/* Immersive Scrollable Chat History area */}
       <div className="flex-1 overflow-y-auto my-4 p-4 glass-panel border-white/10 bg-slate-950/45 rounded-xl space-y-4 custom-scrollbar">
         {messages.map((m) => {
+          console.log('[AI TRACE][8] Component rendering message', { component: 'AIPlanner', message: m });
           const isUser = m.sender === 'user';
           return (
             <div 

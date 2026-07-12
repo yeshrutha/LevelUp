@@ -35,9 +35,18 @@ export const AICoach = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
+  useEffect(() => {
+    if (messages.length > 0) {
+      const latestMessage = messages[messages.length - 1];
+      console.log('[AI TRACE] Final rendered component', { component: 'AICoach', message: latestMessage, totalMessages: messages.length });
+    }
+  }, [messages]);
+
   const handleSend = async (textToSend) => {
     const msg = textToSend || input;
     if (!msg.trim()) return;
+
+    console.log('[AI TRACE][1] Prompt received from frontend', { component: 'AICoach', message: msg, userEmail: user?.email, displayName: user?.displayName, stats: { readiness: user?.readiness || 0, streak: user?.streak || 0 } });
 
     if (!textToSend) setInput('');
 
@@ -70,37 +79,57 @@ export const AICoach = () => {
         throw new Error('Failed to fetch from coach API');
       }
       const data = await response.json();
-      
+      console.log('[AI TRACE][6] Frontend fetch result', { component: 'AICoach', status: response.status, data });
+
+      const aiResponse = typeof data?.aiResponse === 'string' && data.aiResponse.length > 0
+        ? data.aiResponse
+        : (typeof data?.reply === 'string' && data.reply.length > 0 ? data.reply : '');
+      console.log('[AI TRACE][7] Parsed response', { component: 'AICoach', aiResponse });
+
       setTimeout(() => {
-        setMessages(prev => [...prev, {
+        const aiMessage = {
           id: Math.random().toString(),
           sender: 'ai',
-          text: data.reply,
+          text: aiResponse,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }]);
+        };
+
+        console.log('[AI TRACE][7] React state before render', { component: 'AICoach', aiResponse, message: aiMessage });
+        setMessages(prev => {
+          const nextMessages = [...prev, aiMessage];
+          console.log('[AI TRACE][7] React state after render', { component: 'AICoach', nextMessages });
+          return nextMessages;
+        });
         setIsTyping(false);
       }, 700);
 
     } catch (e) {
-      // Offline fallback simulator
+      console.error('[AI TRACE] Frontend fetch failure', { component: 'AICoach', error: e?.message || e });
       setTimeout(() => {
-        let reply = "I am analyzing your Habit Mastery details. Completing custom workspace pages, checkmarks in the calendar, and daily habits is the fastest way to increase your readiness index.";
+        let reply = "I’m here to help with your goals. Share your main objective, schedule, and current routine so I can turn it into a focused plan.";
         const lowText = msg.toLowerCase();
-        
+
         if (lowText.includes('habit') || lowText.includes('routine') || lowText.includes('streak')) {
-          reply = "Building habits requires consistency. Focus on completing your active daily checklist, and try setting calendar alarms to lock in streak milestones.";
+          reply = "Consistency matters. Try anchoring one small habit to a fixed time and keep your progress visible so the routine becomes automatic.";
         } else if (lowText.includes('workspace') || lowText.includes('page')) {
-          reply = "Your custom workspace pages are direct syllabus checklists. Completing daily workspace checkpoints scales your XP gains depending on task consistency.";
+          reply = "Your workspace pages are useful checklists. Keep them narrow and focused so you can complete one meaningful task at a time.";
         } else if (lowText.includes('calendar') || lowText.includes('milestone')) {
-          reply = "Planning schedules helps clear focus. Ensure you review upcoming target deadlines in your calendar weekly.";
+          reply = "Planning your week in advance makes execution easier. Map your important deadlines first, then fill the rest around them.";
         }
 
-        setMessages(prev => [...prev, {
+        const aiMessage = {
           id: Math.random().toString(),
           sender: 'ai',
           text: reply,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }]);
+        };
+
+        console.log('[AI TRACE][7] React state before render', { component: 'AICoach', aiResponse: reply, message: aiMessage });
+        setMessages(prev => {
+          const nextMessages = [...prev, aiMessage];
+          console.log('[AI TRACE][7] React state after render', { component: 'AICoach', nextMessages });
+          return nextMessages;
+        });
         setIsTyping(false);
       }, 800);
     }
@@ -181,7 +210,9 @@ export const AICoach = () => {
 
             {/* Message Area */}
             <div className="flex-1 p-4 overflow-y-auto space-y-4">
-              {messages.map((m) => (
+              {messages.map((m) => {
+                console.log('[AI TRACE][8] Component rendering message', { component: 'AICoach', message: m });
+                return (
                 <div
                   key={m.id}
                   className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -197,7 +228,8 @@ export const AICoach = () => {
                     <span className="block text-[8px] text-slate-500 text-right mt-1.5">{m.time}</span>
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               {isTyping && (
                 <div className="flex justify-start">

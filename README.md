@@ -79,6 +79,10 @@ Create a `.env` file in the `client` directory to point the frontend at the API 
 ```env
 VITE_API_BASE_URL=http://localhost:5000
 ```
+Set the Gemini API key in the server environment for the backend AI calls:
+```env
+GEMINI_API_KEY=your_gemini_api_key
+```
 *Note: If no MongoDB URI is provided, the backend falls back to an in-memory multi-user database.*
 
 ### 3. Run Development Servers

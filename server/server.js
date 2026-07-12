@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
 
@@ -748,99 +749,63 @@ app.post('/api/integrations/notify', async (req, res) => {
   }
 });
 
-// --- AI Assistant Integration (NVIDIA AI with Gemini Fallback) ---
+// --- AI Assistant Integration (Gemini 2.5 Flash) ---
 const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
-  const nvidiaKey = process.env.NVIDIA_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
 
-  if (nvidiaKey) {
-    const url = 'https://integrate.api.nvidia.com/v1/chat/completions';
-    const targetModel = 'meta/llama-3.3-70b-instruct';
-    
-    console.log(`[AI TRACE] Initiating request to NVIDIA API using model: ${targetModel}`);
-    console.log(`[AI TRACE] Raw System Instruction:`, systemInstruction);
-    console.log(`[AI TRACE] Raw User Prompt:`, userPrompt);
+  if (!geminiKey) {
+    throw new Error('AI Provider Configuration Error: GEMINI_API_KEY is not configured in your .env file.');
+  }
+
+  const totalStart = Date.now();
+  const requestStart = new Date().toISOString();
+  const model = 'gemini-2.5-flash';
+
+  console.log(`[PERF TRACE] 3. Prompt constructed. Prompt characters: ${userPrompt.length + systemInstruction.length}. Approx tokens: ${Math.round((userPrompt.length + systemInstruction.length) / 4)}`);
+  console.log(`[PERF TRACE] 4. Gemini request starting using model ${model} at: ${requestStart}`);
+
+  aiPlannerTraceLogs.push({
+    time: requestStart,
+    step: 'GEMINI_REQUEST',
+    model,
+    userPrompt
+  });
+  if (aiPlannerTraceLogs.length > 50) aiPlannerTraceLogs.shift();
+
+  try {
+    const ai = new GoogleGenAI({ apiKey: geminiKey });
+    const response = await ai.models.generateContent({
+      model,
+      contents: `${systemInstruction}\n\nUser request:\n${userPrompt}`,
+      config: {
+        temperature: 0.2,
+        maxOutputTokens: 1024,
+        responseMimeType: jsonMode ? 'application/json' : undefined
+      }
+    });
+
+    const responseTimeMs = Date.now() - totalStart;
+    const text = response.text;
+
+    console.log(`[PERF TRACE] 5. Gemini response received after ${responseTimeMs}ms`);
+    console.log(`[PERF TRACE] 6. Total execution time: ${Date.now() - totalStart}ms`);
 
     aiPlannerTraceLogs.push({
       time: new Date().toISOString(),
-      step: 'NVIDIA_REQUEST',
-      model: targetModel,
-      userPrompt
-    });
-    if (aiPlannerTraceLogs.length > 50) aiPlannerTraceLogs.shift();
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${nvidiaKey}`
-      },
-      body: JSON.stringify({
-        model: targetModel,
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: userPrompt }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`[AI TRACE] NVIDIA API Error: Status ${response.status} - ${errText}`);
-      throw new Error(`NVIDIA AI API Response: ${response.status} - ${errText}`);
-    }
-
-    const data = await response.json();
-    const text = data.choices?.[0]?.message?.content;
-    console.log(`[AI TRACE] Raw response received from NVIDIA:`, text);
-
-    aiPlannerTraceLogs.push({
-      time: new Date().toISOString(),
-      step: 'NVIDIA_RESPONSE',
+      step: 'GEMINI_RESPONSE',
       content: text
     });
     if (aiPlannerTraceLogs.length > 50) aiPlannerTraceLogs.shift();
 
     if (!text) {
-      throw new Error('Empty response content received from NVIDIA AI.');
-    }
-    return text;
-  } else if (geminiKey) {
-    const model = "gemini-1.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: userPrompt }]
-          }
-        ],
-        systemInstruction: {
-          parts: [{ text: systemInstruction }]
-        },
-        generationConfig: jsonMode ? {
-          responseMimeType: 'application/json'
-        } : undefined
-      })
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Gemini API Response: ${response.status} - ${errText}`);
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) {
       throw new Error('Received empty response payload from Gemini API.');
     }
+
     return text;
-  } else {
-    throw new Error('AI Provider Configuration Error: Neither NVIDIA_API_KEY nor GEMINI_API_KEY is configured in your .env file.');
+  } catch (error) {
+    const totalTimeMs = Date.now() - totalStart;
+    console.error(`[AI TRACE] Gemini API Error after ${totalTimeMs}ms:`, error?.message || error);
+    throw new Error(`Gemini API Error: ${error?.message || 'Unknown Gemini error'}`);
   }
 };
 
@@ -853,6 +818,8 @@ export const aiPlannerTraceLogs = [];
 app.post('/api/ai/coach', async (req, res) => {
   const { message, stats, email, displayName } = req.body;
   const userEmail = req.user?.email || email || 'User';
+
+  console.log('[AI TRACE][1] Prompt received from frontend', { endpoint: '/api/ai/coach', message, email, displayName, stats });
 
   let aiPersonality = 'Friendly Coach';
   let responseLength = 'Short';
@@ -925,10 +892,23 @@ app.post('/api/ai/coach', async (req, res) => {
     Do not return a single block of text or short paragraphs. Always use this exact structured template.
   `;
 
+  const tRouteStart = Date.now();
+  console.log(`[PERF TRACE] 2. Backend coach request received at: ${new Date().toISOString()}`);
+
   try {
-    if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
+    if (process.env.GEMINI_API_KEY) {
+      console.log('[AI TRACE][2] Prompt sent to Gemini', { endpoint: '/api/ai/coach', userPrompt: message || 'Hello', systemInstruction });
       const reply = await callGemini(systemInstruction, message || 'Hello');
-      return res.json({ reply: reply.trim() });
+      console.log(`[PERF TRACE] 7. AI reply fetched at delta: ${Date.now() - tRouteStart}ms`);
+
+      const aiResponse = reply;
+      console.log('[AI TRACE][3] Raw Gemini response', { endpoint: '/api/ai/coach', rawResponse: aiResponse });
+      console.log('[AI TRACE][4] Parsed response', { endpoint: '/api/ai/coach', parsedResponse: aiResponse });
+      console.log(`[PERF TRACE] 8. Backend JSON response formatting finished at delta: ${Date.now() - tRouteStart}ms`);
+
+      const responsePayload = { aiResponse, reply: aiResponse };
+      console.log('[AI TRACE][5] Express API response', { endpoint: '/api/ai/coach', responsePayload });
+      return res.json(responsePayload);
     }
   } catch (err) {
     lastAiErrors.coach = err.message;
@@ -936,28 +916,26 @@ app.post('/api/ai/coach', async (req, res) => {
   }
 
   // Fallback if Gemini is not set up or fails
-  let reply = "I am analyzing your Habit Mastery details. Completing custom workspace pages, checkmarks in the calendar, and daily habits is the fastest way to increase your readiness index.";
-  
+  let aiResponse = "I’m here to help with your goals. Share your main objective, schedule, and current routine so I can turn it into a focused plan.";
+
   if (message) {
     const pLower = message.toLowerCase();
     if (pLower.includes('dsa') || pLower.includes('leet') || pLower.includes('code')) {
-      reply = "Keep solving challenges sequentially. Focus on recognizing pattern families (two-pointers, sliding window, backtracking) instead of dry memorization.";
+      aiResponse = "Keep solving challenges sequentially. Focus on recognizing pattern families (two-pointers, sliding window, backtracking) instead of dry memorization.";
     } else if (pLower.includes('habit') || pLower.includes('streak')) {
-      reply = `Streaks generate compound momentum! Maintaining a ${stats?.streak || 0}-day habit checkoff rate creates massive discipline. Don't break the chain.`;
+      aiResponse = `Consistency matters. Try anchoring one small habit to a fixed time and keep your progress visible so the routine becomes automatic.`;
     } else if (pLower.includes('project') || pLower.includes('milestone')) {
-      reply = "When defining custom milestones, scope them into small, modular checklist items. Fast verification prevents study fatigue!";
-    } else {
-      const readiness = stats?.readiness || 0;
-      if (readiness < 40) {
-        reply = `You are currently at ${readiness}% completion readiness. Let's raise the momentum! Complete your daily habit goals and Notion tasks to gain quick XP and level up.`;
-      } else if (readiness < 70) {
-        reply = `Solid baseline progress! At ${readiness}% readiness, focus on establishing a 5-day habit streak to lift your tier rank toward Gold and Platinum.`;
-      } else {
-        reply = `Outstanding execution! At ${readiness}% readiness, you are in the elite tier. Elevate your targets by designing more advanced milestones!`;
-      }
+      aiResponse = "When defining custom milestones, scope them into small, modular checklist items. Fast verification prevents study fatigue!";
+    } else if (pLower.includes('exam') || pLower.includes('study')) {
+      aiResponse = "Break your study into short focus blocks and review your weakest topics first. A simple weekly plan will usually beat a vague plan.";
     }
   }
-  return res.json({ reply });
+
+  console.log('[AI TRACE][3] Raw Gemini response', { endpoint: '/api/ai/coach', rawResponse: aiResponse, source: 'fallback' });
+  console.log('[AI TRACE][4] Parsed response', { endpoint: '/api/ai/coach', parsedResponse: aiResponse, source: 'fallback' });
+  const responsePayload = { aiResponse, reply: aiResponse };
+  console.log('[AI TRACE][5] Express API response', { endpoint: '/api/ai/coach', responsePayload, source: 'fallback' });
+  return res.json(responsePayload);
 });
 
 // Notion-style AI Checklist Schedule Generator
@@ -986,7 +964,7 @@ app.post('/api/ai/notion', async (req, res) => {
   `;
 
   try {
-    if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
+    if (process.env.GEMINI_API_KEY) {
       let responseText = await callGemini(systemInstruction, `Generate progressive tasks for ${daysCount} days matching the prompt: "${prompt}"`, true);
       responseText = responseText.replace(/```json/i, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(responseText);
@@ -1097,10 +1075,10 @@ app.post('/api/ai/planner', async (req, res) => {
   if (aiPlannerTraceLogs.length > 50) aiPlannerTraceLogs.shift();
 
   try {
-    if (process.env.NVIDIA_API_KEY || process.env.GEMINI_API_KEY) {
+    if (process.env.GEMINI_API_KEY) {
       let responseText = await callGemini(systemInstruction, `Generate habits and calendar events for the prompt: "${prompt}"`, true);
       
-      console.log("=== RAW NVIDIA RESPONSE ===");
+      console.log("=== RAW GEMINI RESPONSE ===");
       console.log(responseText);
 
       let parsed = null;
@@ -1255,7 +1233,6 @@ app.get('/api/system/diagnostics', async (req, res) => {
       serverTime: now.toISOString(),
       isConnectedToMongo,
       hasGeminiKey: !!process.env.GEMINI_API_KEY,
-      hasNvidiaKey: !!process.env.NVIDIA_API_KEY,
       lastAiErrors,
       aiPlannerTraceLogs,
       sentRemindersCache,
