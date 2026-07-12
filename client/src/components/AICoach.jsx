@@ -29,6 +29,7 @@ export const AICoach = () => {
 
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const isRequestInFlight = useRef(false);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -38,15 +39,34 @@ export const AICoach = () => {
   useEffect(() => {
     if (messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
+      const displayedMessage = latestMessage.text;
+      console.log('MESSAGE RENDERED:', displayedMessage);
+      console.log(`[AI COACH] Frontend rendered: ${new Date().toISOString()}`);
       console.log('[AI TRACE] Final rendered component', { component: 'AICoach', message: latestMessage, totalMessages: messages.length });
     }
   }, [messages]);
 
-  const handleSend = async (textToSend) => {
+  const handleSend = async (textToSend, source = 'manual') => {
     const msg = textToSend || input;
     if (!msg.trim()) return;
+    if (isRequestInFlight.current) return;
+    isRequestInFlight.current = true;
+    const tStart = Date.now();
 
-    console.log('[AI TRACE][1] Prompt received from frontend', { component: 'AICoach', message: msg, userEmail: user?.email, displayName: user?.displayName, stats: { readiness: user?.readiness || 0, streak: user?.streak || 0 } });
+    const endpoint = `${API_BASE_URL}/api/ai/coach`;
+    const requestPayload = {
+      message: msg,
+      email: user?.email,
+      displayName: user?.displayName,
+      stats: {
+        readiness: user?.readiness || 0,
+        streak: user?.streak || 0
+      }
+    };
+
+    console.log('[AI TRACE][1] Prompt received from frontend', { component: 'AICoach', source, ...requestPayload });
+    console.log('REQUEST PAYLOAD:', requestPayload);
+    console.log('API ENDPOINT:', endpoint);
 
     if (!textToSend) setInput('');
 
@@ -60,83 +80,59 @@ export const AICoach = () => {
     setMessages(prev => [...prev, userMsg]);
     setIsTyping(true);
 
-    // Call Local Backend or use fallback simulated coach response
+    // Call the coach API once and render only its successful Gemini response.
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/coach`, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: msg,
-          email: user?.email,
-          displayName: user?.displayName,
-          stats: {
-            readiness: user?.readiness || 0,
-            streak: user?.streak || 0
-          }
-        })
+        body: JSON.stringify(requestPayload)
       });
       if (!response.ok) {
         throw new Error('Failed to fetch from coach API');
       }
-      const data = await response.json();
-      console.log('[AI TRACE][6] Frontend fetch result', { component: 'AICoach', status: response.status, data });
+      const responseData = await response.json();
+      console.log('API RESPONSE:', responseData);
+      console.log('[AI TRACE][4] Frontend fetch response', { component: 'AICoach', status: response.status, data: responseData });
 
-      const aiResponse = typeof data?.aiResponse === 'string' && data.aiResponse.length > 0
-        ? data.aiResponse
-        : (typeof data?.reply === 'string' && data.reply.length > 0 ? data.reply : '');
-      console.log('[AI TRACE][7] Parsed response', { component: 'AICoach', aiResponse });
+      // The successful coach contract contains only Gemini's generated text.
+      const coachResponse = responseData?.success === true && typeof responseData.response === 'string'
+        ? responseData.response
+        : '';
+      console.log('MESSAGE STORED IN STATE:', coachResponse);
+      console.log('[AI TRACE][5] React state payload', { component: 'AICoach', coachResponse });
 
       setTimeout(() => {
         const aiMessage = {
           id: Math.random().toString(),
           sender: 'ai',
-          text: aiResponse,
+          text: coachResponse,
+          source,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
-        console.log('[AI TRACE][7] React state before render', { component: 'AICoach', aiResponse, message: aiMessage });
+        console.log('[AI TRACE][6] React state before render', { component: 'AICoach', coachResponse, message: aiMessage });
         setMessages(prev => {
           const nextMessages = [...prev, aiMessage];
-          console.log('[AI TRACE][7] React state after render', { component: 'AICoach', nextMessages });
+          console.log('[AI TRACE][6] React state after render', { component: 'AICoach', nextMessages });
           return nextMessages;
         });
         setIsTyping(false);
+        isRequestInFlight.current = false;
+        console.log(`[AI COACH] Frontend total execution time: ${Date.now() - tStart}ms`);
       }, 700);
 
     } catch (e) {
       console.error('[AI TRACE] Frontend fetch failure', { component: 'AICoach', error: e?.message || e });
-      setTimeout(() => {
-        let reply = "I’m here to help with your goals. Share your main objective, schedule, and current routine so I can turn it into a focused plan.";
-        const lowText = msg.toLowerCase();
-
-        if (lowText.includes('habit') || lowText.includes('routine') || lowText.includes('streak')) {
-          reply = "Consistency matters. Try anchoring one small habit to a fixed time and keep your progress visible so the routine becomes automatic.";
-        } else if (lowText.includes('workspace') || lowText.includes('page')) {
-          reply = "Your workspace pages are useful checklists. Keep them narrow and focused so you can complete one meaningful task at a time.";
-        } else if (lowText.includes('calendar') || lowText.includes('milestone')) {
-          reply = "Planning your week in advance makes execution easier. Map your important deadlines first, then fill the rest around them.";
-        }
-
-        const aiMessage = {
-          id: Math.random().toString(),
-          sender: 'ai',
-          text: reply,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-
-        console.log('[AI TRACE][7] React state before render', { component: 'AICoach', aiResponse: reply, message: aiMessage });
-        setMessages(prev => {
-          const nextMessages = [...prev, aiMessage];
-          console.log('[AI TRACE][7] React state after render', { component: 'AICoach', nextMessages });
-          return nextMessages;
-        });
-        setIsTyping(false);
-      }, 800);
+      setIsTyping(false);
+      isRequestInFlight.current = false;
+      console.log(`[AI COACH] Frontend total execution time: ${Date.now() - tStart}ms`);
     }
   };
 
   const handleSuggestion = (prompt) => {
-    handleSend(prompt);
+    console.log('SUGGESTION TEXT:', prompt);
+    console.log('FUNCTION CALLED: handleSend');
+    handleSend(prompt, 'suggestion');
   };
 
   const handleClearChat = () => {
@@ -211,7 +207,7 @@ export const AICoach = () => {
             {/* Message Area */}
             <div className="flex-1 p-4 overflow-y-auto space-y-4">
               {messages.map((m) => {
-                console.log('[AI TRACE][8] Component rendering message', { component: 'AICoach', message: m });
+                console.log('[AI TRACE][6] Final rendered text', { component: 'AICoach', renderedText: m.text });
                 return (
                 <div
                   key={m.id}

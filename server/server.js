@@ -750,6 +750,46 @@ app.post('/api/integrations/notify', async (req, res) => {
 });
 
 // --- AI Assistant Integration (Gemini 2.5 Flash) ---
+const extractGeminiText = (payload) => {
+  if (typeof payload === 'string' && payload.trim()) return payload.trim();
+  if (payload?.text && typeof payload.text === 'string' && payload.text.trim()) return payload.text.trim();
+
+  const candidateParts = [];
+  const addParts = (value) => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      value.forEach(addParts);
+      return;
+    }
+    if (typeof value === 'string' && value.trim()) {
+      candidateParts.push(value.trim());
+      return;
+    }
+    if (value?.parts) {
+      value.parts.forEach(addParts);
+      return;
+    }
+    if (value?.content?.parts) {
+      value.content.parts.forEach(addParts);
+      return;
+    }
+    if (value?.candidates) {
+      value.candidates.forEach(addParts);
+      return;
+    }
+    if (value?.message?.content) {
+      addParts(value.message.content);
+    }
+  };
+
+  addParts(payload);
+  if (candidateParts.length > 0) {
+    return candidateParts.join('\n').trim();
+  }
+
+  return '';
+};
+
 const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
   const geminiKey = process.env.GEMINI_API_KEY;
 
@@ -785,10 +825,13 @@ const callAI = async (systemInstruction, userPrompt, jsonMode = false) => {
     });
 
     const responseTimeMs = Date.now() - totalStart;
-    const text = response.text;
+    const rawResponse = response;
+    const text = extractGeminiText(rawResponse);
 
     console.log(`[PERF TRACE] 5. Gemini response received after ${responseTimeMs}ms`);
     console.log(`[PERF TRACE] 6. Total execution time: ${Date.now() - totalStart}ms`);
+    console.log('RAW GEMINI RESPONSE:');
+    console.log(rawResponse);
 
     aiPlannerTraceLogs.push({
       time: new Date().toISOString(),
@@ -817,8 +860,11 @@ export const aiPlannerTraceLogs = [];
 // AI Coach Response Generator Endpoint
 app.post('/api/ai/coach', async (req, res) => {
   const { message, stats, email, displayName } = req.body;
+  const prompt = typeof message === 'string' ? message.trim() : '';
   const userEmail = req.user?.email || email || 'User';
 
+  console.log(`[AI COACH] Request received: ${new Date().toISOString()}`);
+  console.log('USER PROMPT:', prompt);
   console.log('[AI TRACE][1] Prompt received from frontend', { endpoint: '/api/ai/coach', message, email, displayName, stats });
 
   let aiPersonality = 'Friendly Coach';
@@ -897,17 +943,21 @@ app.post('/api/ai/coach', async (req, res) => {
 
   try {
     if (process.env.GEMINI_API_KEY) {
-      console.log('[AI TRACE][2] Prompt sent to Gemini', { endpoint: '/api/ai/coach', userPrompt: message || 'Hello', systemInstruction });
-      const reply = await callGemini(systemInstruction, message || 'Hello');
+      console.log('[AI COACH] Gemini request started:', new Date().toISOString());
+      console.log('[AI TRACE][2] Prompt sent to Gemini', { endpoint: '/api/ai/coach', userPrompt: prompt || 'Hello', systemInstruction });
+      const reply = await callGemini(systemInstruction, prompt || 'Hello');
       console.log(`[PERF TRACE] 7. AI reply fetched at delta: ${Date.now() - tRouteStart}ms`);
 
-      const aiResponse = reply;
-      console.log('[AI TRACE][3] Raw Gemini response', { endpoint: '/api/ai/coach', rawResponse: aiResponse });
-      console.log('[AI TRACE][4] Parsed response', { endpoint: '/api/ai/coach', parsedResponse: aiResponse });
+      const aiText = typeof reply === 'string' ? reply.trim() : extractGeminiText(reply);
+      console.log('[AI COACH] Gemini response received:', new Date().toISOString());
+      console.log('TEXT SENT TO FRONTEND:', aiText);
+      console.log('[AI TRACE][4] Backend response JSON', { endpoint: '/api/ai/coach', responsePayload: { success: true, response: aiText } });
       console.log(`[PERF TRACE] 8. Backend JSON response formatting finished at delta: ${Date.now() - tRouteStart}ms`);
 
-      const responsePayload = { aiResponse, reply: aiResponse };
+      const responsePayload = { success: true, response: aiText };
       console.log('[AI TRACE][5] Express API response', { endpoint: '/api/ai/coach', responsePayload });
+      console.log(`[AI COACH] Response returned: ${new Date().toISOString()}`);
+      console.log(`[AI COACH] Total execution time: ${Date.now() - tRouteStart}ms`);
       return res.json(responsePayload);
     }
   } catch (err) {
@@ -915,27 +965,13 @@ app.post('/api/ai/coach', async (req, res) => {
     console.error('⚠️ Gemini AI Coach Error:', err.message);
   }
 
-  // Fallback if Gemini is not set up or fails
-  let aiResponse = "I’m here to help with your goals. Share your main objective, schedule, and current routine so I can turn it into a focused plan.";
-
-  if (message) {
-    const pLower = message.toLowerCase();
-    if (pLower.includes('dsa') || pLower.includes('leet') || pLower.includes('code')) {
-      aiResponse = "Keep solving challenges sequentially. Focus on recognizing pattern families (two-pointers, sliding window, backtracking) instead of dry memorization.";
-    } else if (pLower.includes('habit') || pLower.includes('streak')) {
-      aiResponse = `Consistency matters. Try anchoring one small habit to a fixed time and keep your progress visible so the routine becomes automatic.`;
-    } else if (pLower.includes('project') || pLower.includes('milestone')) {
-      aiResponse = "When defining custom milestones, scope them into small, modular checklist items. Fast verification prevents study fatigue!";
-    } else if (pLower.includes('exam') || pLower.includes('study')) {
-      aiResponse = "Break your study into short focus blocks and review your weakest topics first. A simple weekly plan will usually beat a vague plan.";
-    }
-  }
-
-  console.log('[AI TRACE][3] Raw Gemini response', { endpoint: '/api/ai/coach', rawResponse: aiResponse, source: 'fallback' });
-  console.log('[AI TRACE][4] Parsed response', { endpoint: '/api/ai/coach', parsedResponse: aiResponse, source: 'fallback' });
-  const responsePayload = { aiResponse, reply: aiResponse };
-  console.log('[AI TRACE][5] Express API response', { endpoint: '/api/ai/coach', responsePayload, source: 'fallback' });
-  return res.json(responsePayload);
+  const responsePayload = { success: false, response: '' };
+  console.log('[AI TRACE][3] Raw Gemini response', { endpoint: '/api/ai/coach', rawResponse: '', source: 'error' });
+  console.log('[AI TRACE][4] Backend response JSON', { endpoint: '/api/ai/coach', responsePayload, source: 'error' });
+  console.log('[AI TRACE][5] Express API response', { endpoint: '/api/ai/coach', responsePayload, source: 'error' });
+  console.log(`[AI COACH] Response returned: ${new Date().toISOString()}`);
+  console.log(`[AI COACH] Total execution time: ${Date.now() - tRouteStart}ms`);
+  return res.status(502).json(responsePayload);
 });
 
 // Notion-style AI Checklist Schedule Generator
@@ -1265,8 +1301,27 @@ app.post('/api/system/reset-db', async (req, res) => {
   }
 });
 
-// Scheduled Habit Reminders Background Job
+// Scheduled habit and calendar reminders background job
 const sentRemindersCache = {};
+
+const getMinutesFromTime = (time) => {
+  if (typeof time !== 'string' || !time.trim() || time === 'All Day') return 9 * 60;
+
+  const match = time.trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AaPp][Mm]))?$/);
+  if (!match) return null;
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const meridiem = match[3]?.toLowerCase();
+  if (hour > 23 || minute > 59) return null;
+  if (meridiem) {
+    if (hour < 1 || hour > 12) return null;
+    if (meridiem === 'pm' && hour !== 12) hour += 12;
+    if (meridiem === 'am' && hour === 12) hour = 0;
+  }
+
+  return hour * 60 + minute;
+};
 
 const sendHabitReminders = async () => {
   try {
@@ -1305,15 +1360,15 @@ const sendHabitReminders = async () => {
       const parts = userLocalTimeStr.split(':');
       if (parts.length < 2) continue;
       const formattedTime = `${parts[0]}:${parts[1]}`;
+      const [userHour, userMin] = parts.map(Number);
+      const userMinutes = userHour * 60 + userMin;
+      let userDateStr = dateKey;
+      try {
+        userDateStr = now.toLocaleDateString('en-CA', { timeZone: timezone });
+      } catch (e) {}
 
       for (const [habitName, reminder] of Object.entries(reminders)) {
         if (reminder && reminder.enabled && reminder.time) {
-          // Get local date key for this user
-          let userDateStr = dateKey;
-          try {
-            userDateStr = now.toLocaleDateString('en-CA', { timeZone: timezone });
-          } catch (e) {}
-
           // Check if habit is already completed today
           const isCompleted = !!(u.habits?.[userDateStr]?.[habitName]);
           if (isCompleted) continue; // Skip if checked off!
@@ -1322,10 +1377,7 @@ const sendHabitReminders = async () => {
           const timeParts = reminder.time.split(':');
           if (timeParts.length < 2) continue;
           const [remHour, remMin] = timeParts.map(Number);
-          const [userHour, userMin] = parts.map(Number);
-
           const reminderMinutes = remHour * 60 + remMin;
-          const userMinutes = userHour * 60 + userMin;
           const diffMinutes = userMinutes - reminderMinutes;
           // Send if past the scheduled time, and either we haven't sent any alert today yet OR it's a multiple of 5 minutes later
           const todayPrefix = `${u.email}_${habitName}_${userDateStr}_`;
@@ -1371,9 +1423,50 @@ const sendHabitReminders = async () => {
           }
         }
       }
+
+      // Calendar events use the same registered browser-push subscription as habits.
+      // Timed events notify at their event time; all-day events notify at 9:00 AM.
+      const calendarEvents = Array.isArray(u.calendar) ? u.calendar : [];
+      for (const event of calendarEvents) {
+        if (!event?.id || event.date !== userDateStr) continue;
+
+        const eventMinutes = getMinutesFromTime(event.time);
+        if (eventMinutes === null || userMinutes < eventMinutes) continue;
+
+        const cacheKey = `calendar_${u.email}_${event.id}_${userDateStr}`;
+        if (sentRemindersCache[cacheKey]) continue;
+        sentRemindersCache[cacheKey] = true;
+
+        const eventTime = event.time && event.time !== 'All Day' ? ` at ${event.time}` : '';
+        console.log(`📅 Calendar reminder: dispatching to ${u.email} for "${event.title}"${eventTime}`);
+
+        try {
+          const payload = {
+            title: '📅 Calendar Reminder',
+            body: `${event.type || 'Scheduled'} event: "${event.title}"${eventTime}`,
+            url: '/#calendar'
+          };
+
+          if (u.pushSubscriptions && u.pushSubscriptions.length > 0) {
+            const cleanSubscriptions = [];
+            for (const sub of u.pushSubscriptions) {
+              const result = await NotificationService.sendPushNotification(sub, payload);
+              if (result.success || !result.expired) cleanSubscriptions.push(sub);
+            }
+
+            if (isConnectedToMongo) {
+              await UserData.updateOne({ email: u.email }, { $set: { pushSubscriptions: cleanSubscriptions } });
+            } else {
+              u.pushSubscriptions = cleanSubscriptions;
+            }
+          }
+        } catch (pushErr) {
+          console.error(`❌ WebPush: Failed to send calendar reminder to ${u.email}:`, pushErr.message);
+        }
+      }
     }
   } catch (err) {
-    console.error('Error sending scheduled habit reminders:', err.message);
+    console.error('Error sending scheduled reminders:', err.message);
   }
 };
 

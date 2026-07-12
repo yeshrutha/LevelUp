@@ -305,12 +305,12 @@ export const Calendar = () => {
                 <div>
                   <label className="block text-[10px] uppercase font-futuristic text-slate-400 mb-1.5">Event Time (Optional)</label>
                   <input
-                    type="text"
+                    type="time"
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
-                    placeholder="e.g. 04:00 PM"
                     className="w-full bg-slate-900 border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/40"
                   />
+                  <p className="mt-1 text-[9px] text-slate-500">A browser notification is sent at this time. All-day events notify at 9:00 AM.</p>
                 </div>
 
                 <div className="flex justify-end gap-2.5 pt-2">

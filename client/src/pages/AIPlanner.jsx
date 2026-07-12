@@ -3,7 +3,6 @@ import { useApp } from '../context/AppContext';
 import { 
   Send, 
   Bot, 
-  Sparkles, 
   Trash2, 
   Activity, 
   Loader2, 
@@ -144,6 +143,7 @@ export default function AIPlanner() {
 
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const isRequestInFlight = useRef(false);
 
   // Sync to local storage
   useEffect(() => {
@@ -160,6 +160,9 @@ export default function AIPlanner() {
   useEffect(() => {
     if (messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
+      const displayedMessage = latestMessage.text;
+      console.log('MESSAGE RENDERED:', displayedMessage);
+      console.log(`[AI COACH] Frontend rendered: ${new Date().toISOString()}`);
       console.log('[AI TRACE] Final rendered component', { component: 'AIPlanner', message: latestMessage, totalMessages: messages.length });
     }
   }, [messages]);
@@ -167,6 +170,8 @@ export default function AIPlanner() {
   const handleSend = async (textToSend) => {
     const msg = textToSend || input;
     if (!msg.trim()) return;
+    if (isRequestInFlight.current) return;
+    isRequestInFlight.current = true;
 
     console.log('[AI TRACE][1] Prompt received from frontend', { component: 'AIPlanner', message: msg, userEmail: user?.email, displayName: user?.displayName, stats: { readiness: user?.readiness || 0, streak: user?.streak || 0 } });
 
@@ -206,63 +211,39 @@ export default function AIPlanner() {
         throw new Error('Coach API offline');
       }
       
-      const data = await response.json();
+      const responseData = await response.json();
       console.log(`[PERF TRACE] 9. Frontend finished JSON parsing and formatting response at delta: ${Date.now() - tStart}ms`);
-      console.log('[AI TRACE][6] Frontend fetch result', { component: 'AIPlanner', status: response.status, data });
+      console.log('API RESPONSE:', responseData);
+      console.log('[AI TRACE][4] Frontend fetch response', { component: 'AIPlanner', status: response.status, data: responseData });
 
-      const aiResponse = typeof data?.aiResponse === 'string' && data.aiResponse.length > 0
-        ? data.aiResponse
-        : (typeof data?.reply === 'string' && data.reply.length > 0 ? data.reply : '');
-      console.log('[AI TRACE][7] Parsed response', { component: 'AIPlanner', aiResponse });
+      // The successful coach contract contains only Gemini's generated text.
+      const coachResponse = responseData?.success === true && typeof responseData.response === 'string'
+        ? responseData.response
+        : '';
+      console.log('MESSAGE STORED IN STATE:', coachResponse);
+      console.log('[AI TRACE][5] React state payload', { component: 'AIPlanner', coachResponse });
 
       const aiMessage = {
         id: Math.random().toString(),
         sender: 'ai',
-        text: aiResponse,
+        text: coachResponse,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
-      console.log('[AI TRACE][7] React state before render', { component: 'AIPlanner', aiResponse, message: aiMessage });
+      console.log('[AI TRACE][6] React state before render', { component: 'AIPlanner', coachResponse, message: aiMessage });
       setMessages(prev => {
         const nextMessages = [...prev, aiMessage];
-        console.log('[AI TRACE][7] React state after render', { component: 'AIPlanner', nextMessages });
+        console.log('[AI TRACE][6] React state after render', { component: 'AIPlanner', nextMessages });
         return nextMessages;
       });
     } catch (e) {
       console.error('[AI TRACE] Frontend fetch failure', { component: 'AIPlanner', error: e?.message || e });
-      setTimeout(() => {
-        let reply = "I am currently processing your request. Completing your workspace pages and daily checklist is the fastest way to master your habits.";
-        const lowText = msg.toLowerCase();
-        
-        if (lowText.includes('habit') || lowText.includes('routine') || lowText.includes('streak')) {
-          reply = "Habit formation requires strict daily consistency. Try marking your attendance daily in the Habit Tracker tab to maintain your streak!";
-        } else if (lowText.includes('exam') || lowText.includes('study') || lowText.includes('rust')) {
-          reply = "For study preparation, break your blocks into 25-minute focus intervals. Schedule your exam dates in the Calendar Planner to keep milestones visible.";
-        } else if (lowText.includes('procrastinate') || lowText.includes('lazy')) {
-          reply = "Procrastination happens when tasks feel overwhelming. Start with a single small target, like 'Drink Water' or 'Write 5 lines of code'. Just complete one daily cell!";
-        }
-
-        const aiMessage = {
-          id: Math.random().toString(),
-          sender: 'ai',
-          text: reply,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-
-        console.log('[AI TRACE][7] React state before render', { component: 'AIPlanner', aiResponse: reply, message: aiMessage });
-        setMessages(prev => {
-          const nextMessages = [...prev, aiMessage];
-          console.log('[AI TRACE][7] React state after render', { component: 'AIPlanner', nextMessages });
-          return nextMessages;
-        });
-      }, 600);
+      setIsTyping(false);
     } finally {
       setIsTyping(false);
+      isRequestInFlight.current = false;
+      console.log(`[AI COACH] Frontend total execution time: ${Date.now() - tStart}ms`);
     }
-  };
-
-  const handleSuggestion = (promptText) => {
-    handleSend(promptText);
   };
 
   const handleClearChat = () => {
@@ -281,14 +262,6 @@ export default function AIPlanner() {
       }
     }
   };
-
-  const suggestionPrompts = [
-    "I wake up at 8 AM and sleep at 2 AM. Help me become productive.",
-    "I have exams in 20 days. Give me a strategy.",
-    "I procrastinate a lot. How do I stop?",
-    "I want to lose weight and eat healthy.",
-    "I am learning Rust. Assist my study blocks."
-  ];
 
   return (
     <div className="flex flex-col h-[calc(100vh-80px)] max-w-4xl mx-auto py-2 relative select-text text-left">
@@ -324,26 +297,6 @@ export default function AIPlanner() {
           </button>
         </div>
       </div>
-
-      {/* Suggestion Prompts Section (shows when chat only contains welcome message) */}
-      {messages.length === 1 && (
-        <div className="mt-4 p-4 glass-panel border-white/5 bg-slate-900/10 rounded-xl space-y-2.5 shrink-0 select-none">
-          <span className="text-[8px] font-bold font-futuristic text-cyan-400 uppercase tracking-widest flex items-center gap-1">
-            <Sparkles size={12} /> Suggestion Prompts
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {suggestionPrompts.map((p, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSuggestion(p)}
-                className="text-[10px] text-slate-350 hover:text-white bg-slate-950/50 hover:bg-slate-900 border border-white/5 hover:border-cyan-500/30 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200"
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Immersive Scrollable Chat History area */}
       <div className="flex-1 overflow-y-auto my-4 p-4 glass-panel border-white/10 bg-slate-950/45 rounded-xl space-y-4 custom-scrollbar">
@@ -401,7 +354,7 @@ export default function AIPlanner() {
         />
         <button
           type="submit"
-          disabled={!input.trim()}
+          disabled={!input.trim() || isTyping}
           className="p-2.5 bg-gradient-to-r from-primary to-accent hover:from-primary-light hover:to-accent-light text-slate-950 rounded-lg cursor-pointer transition-all flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed shadow-glow-accent"
         >
           <Send size={15} />
